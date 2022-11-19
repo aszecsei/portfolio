@@ -5,6 +5,7 @@ import { Container } from './container'
 import { vars } from './style-variables'
 import { BaseHeader, generateHeaderSize } from './typography'
 import { media } from './utils'
+import Link from 'next/link'
 
 const Navbar = styled.nav`
   text-transform: uppercase;
@@ -218,14 +219,15 @@ class Nav extends React.Component<INavProps, INavState> {
       <Navbar>
         <NavbarContainer>
           <NavbarBrand>
-            <NavLink
-              href="/"
-              onClick={
-                this.props.shouldUseScroll ? this.scrollToTop : undefined
-              }
-            >
-              Alic Szecsei
-            </NavLink>
+            <Link href="/" passHref legacyBehavior>
+              <NavLink
+                onClick={
+                  this.props.shouldUseScroll ? this.scrollToTop : undefined
+                }
+              >
+                Alic Szecsei
+              </NavLink>
+            </Link>
             <Hamburger
               dimensions={44}
               isActive={this.state.isActive}
@@ -236,48 +238,52 @@ class Nav extends React.Component<INavProps, INavState> {
           <NavbarCollapse isActive={this.state.isActive}>
             <NavbarNav>
               <NavItem>
-                <NavLink
-                  href="/#about"
-                  onClick={
-                    this.props.shouldUseScroll ? this.scrollToAbout : undefined
-                  }
-                >
-                  About
-                </NavLink>
+                <Link href="/#about" passHref legacyBehavior>
+                  <NavLink
+                    onClick={
+                      this.props.shouldUseScroll ? this.scrollToAbout : undefined
+                    }
+                  >
+                    About
+                  </NavLink>
+                </Link>
               </NavItem>
               <NavItem>
-                <NavLink
-                  href="/#games"
-                  onClick={
-                    this.props.shouldUseScroll ? this.scrollToGames : undefined
-                  }
-                >
-                  Games
-                </NavLink>
+                <Link href="/#games" passHref legacyBehavior>
+                  <NavLink
+                    onClick={
+                      this.props.shouldUseScroll ? this.scrollToGames : undefined
+                    }
+                  >
+                    Games
+                  </NavLink>
+                </Link>
               </NavItem>
               <NavItem>
-                <NavLink
-                  href="/#software"
-                  onClick={
-                    this.props.shouldUseScroll
-                      ? this.scrollToSoftware
-                      : undefined
-                  }
-                >
-                  Software
-                </NavLink>
+                <Link href="/#software" passHref legacyBehavior>
+                  <NavLink
+                    onClick={
+                      this.props.shouldUseScroll
+                        ? this.scrollToSoftware
+                        : undefined
+                    }
+                  >
+                    Software
+                  </NavLink>
+                </Link>
               </NavItem>
               <NavItem>
-                <NavLink
-                  href="/#contact"
-                  onClick={
-                    this.props.shouldUseScroll
-                      ? this.scrollToContact
-                      : undefined
-                  }
-                >
-                  Contact
-                </NavLink>
+                <Link href="/#contact" passHref legacyBehavior>
+                  <NavLink
+                    onClick={
+                      this.props.shouldUseScroll
+                        ? this.scrollToContact
+                        : undefined
+                    }
+                  >
+                    Contact
+                  </NavLink>
+                </Link>
               </NavItem>
               <NavItem>
                 <NavLink

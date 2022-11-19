@@ -1,12 +1,9 @@
-const withTypescript = require('@zeit/next-typescript')
-
-const withPlugins = require('next-compose-plugins')
-
-const myCustomization = {
+const nextConfig = {
   distDir: '../.next',
+  reactStrictMode: true,
+  compiler: {
+    styledComponents: true,
+  }
 }
 
-module.exports = withPlugins(
-  [[withTypescript]],
-  myCustomization,
-)
+module.exports = nextConfig

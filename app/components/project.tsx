@@ -164,7 +164,7 @@ export const Project = (props: IProjectProps) => (
   <>
     <Card>
       <H5>
-        <Link href={'/' + props.projectDetails.url} passHref>
+        <Link href={'/' + props.projectDetails.url} passHref legacyBehavior>
           <ProjectLink>{props.projectDetails.name}</ProjectLink>
         </Link>
       </H5>
