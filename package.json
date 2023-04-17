@@ -34,7 +34,7 @@
     "sharp": "^0.31.2",
     "stemr": "^1.0.0",
     "styled-components": "^5.3.6",
-    "webp-loader": "^0.4.0"
+    "webp-loader": "^0.6.0"
   },
   "devDependencies": {
     "@types/animejs": "^3.1.6",
