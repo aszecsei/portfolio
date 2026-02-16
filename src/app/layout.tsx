@@ -1,6 +1,10 @@
+import { config } from '@fortawesome/fontawesome-svg-core'
+import '@fortawesome/fontawesome-svg-core/styles.css'
 import type { Metadata } from 'next'
 import { Open_Sans, Raleway } from 'next/font/google'
 import '@/styles/global.css'
+
+config.autoAddCss = false
 
 const raleway = Raleway({
   subsets: ['latin'],

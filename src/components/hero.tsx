@@ -1,11 +1,13 @@
 import {
-  FaEnvelope,
-  FaGithub,
-  FaLinkedinIn,
-  FaMastodon,
-  FaTwitter,
-  FaWordpressSimple,
-} from 'react-icons/fa'
+  faBluesky,
+  faGithub,
+  faLinkedinIn,
+  faMastodon,
+  faXTwitter as faTwitter,
+  faWordpressSimple,
+} from '@fortawesome/free-brands-svg-icons'
+import { faEnvelope } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import * as styles from './hero.css'
 import { Icon } from './icon'
 
@@ -33,12 +35,19 @@ export const SocialButtons = () => (
   <>
     <a className={styles.socialButton} href="mailto:aszecsei@gmail.com">
       <Icon>
-        <FaEnvelope aria-labelledby="Email" role="img" />
+        <FontAwesomeIcon icon={faEnvelope} aria-labelledby="Email" role="img" />
       </Icon>
     </a>
-    <a className={styles.socialButton} href="https://twitter.com/aszecsei">
+    <a
+      className={styles.socialButton}
+      href="https://bsky.app/profile/crowmaki.bsky.social"
+    >
       <Icon>
-        <FaTwitter aria-labelledby="Twitter" role="img" />
+        <FontAwesomeIcon
+          icon={faBluesky}
+          aria-labelledby="Bluesky"
+          role="img"
+        />
       </Icon>
     </a>
     <a
@@ -46,7 +55,11 @@ export const SocialButtons = () => (
       href="https://mastodon.gamedev.place/@aszecsei"
     >
       <Icon>
-        <FaMastodon aria-labelledby="Mastodon" role="img" />
+        <FontAwesomeIcon
+          icon={faMastodon}
+          aria-labelledby="Mastodon"
+          role="img"
+        />
       </Icon>
     </a>
     <a
@@ -54,17 +67,34 @@ export const SocialButtons = () => (
       href="https://linkedin.com/in/alic-szecsei"
     >
       <Icon>
-        <FaLinkedinIn aria-labelledby="LinkedIn" role="img" />
+        <FontAwesomeIcon
+          icon={faLinkedinIn}
+          aria-labelledby="LinkedIn"
+          role="img"
+        />
       </Icon>
     </a>
     <a className={styles.socialButton} href="https://github.com/aszecsei">
       <Icon>
-        <FaGithub aria-labelledby="GitHub" role="img" />
+        <FontAwesomeIcon icon={faGithub} aria-labelledby="GitHub" role="img" />
       </Icon>
     </a>
     <a className={styles.socialButton} href="http://blog.alic-szecsei.com">
       <Icon>
-        <FaWordpressSimple aria-labelledby="Wordpress" role="img" />
+        <FontAwesomeIcon
+          icon={faWordpressSimple}
+          aria-labelledby="Wordpress"
+          role="img"
+        />
+      </Icon>
+    </a>
+    <a className={styles.socialButton} href="https://x.com/aszecsei">
+      <Icon>
+        <FontAwesomeIcon
+          icon={faTwitter}
+          aria-labelledby="Twitter"
+          role="img"
+        />
       </Icon>
     </a>
   </>

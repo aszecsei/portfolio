@@ -1,5 +1,6 @@
+import { faAnglesRight } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Link from 'next/link'
-import { FaAngleDoubleRight } from 'react-icons/fa'
 import type { IProject } from '@/models/project'
 import * as tokens from '@/styles/tokens.css'
 import { Chip, Chips } from './chip'
@@ -71,7 +72,7 @@ export const Project = (props: IProjectProps) => (
             <Text>
               <span className={styles.projectCheck}>
                 <Icon>
-                  <FaAngleDoubleRight aria-hidden="true" />
+                  <FontAwesomeIcon icon={faAnglesRight} aria-hidden="true" />
                 </Icon>
               </span>{' '}
               {val}

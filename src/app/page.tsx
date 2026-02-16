@@ -1,6 +1,12 @@
 'use client'
 
-import { FaDesktop, FaGamepad, FaReact, FaRobot } from 'react-icons/fa'
+import { faReact } from '@fortawesome/free-brands-svg-icons'
+import {
+  faDesktop,
+  faGamepad,
+  faRobot,
+} from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { Column, Columns } from '@/components/column'
 import { Container } from '@/components/container'
@@ -58,7 +64,7 @@ export default function HomePage() {
               <H1 alignment="center">
                 <SkillIcon>
                   <Icon>
-                    <FaGamepad />
+                    <FontAwesomeIcon icon={faGamepad} />
                   </Icon>
                 </SkillIcon>
               </H1>
@@ -73,7 +79,7 @@ export default function HomePage() {
               <H1 alignment="center">
                 <SkillIcon>
                   <Icon>
-                    <FaReact />
+                    <FontAwesomeIcon icon={faReact} />
                   </Icon>
                 </SkillIcon>
               </H1>
@@ -88,7 +94,7 @@ export default function HomePage() {
               <H1 alignment="center">
                 <SkillIcon>
                   <Icon>
-                    <FaRobot />
+                    <FontAwesomeIcon icon={faRobot} />
                   </Icon>
                 </SkillIcon>
               </H1>
@@ -103,7 +109,7 @@ export default function HomePage() {
               <H1 alignment="center">
                 <SkillIcon>
                   <Icon>
-                    <FaDesktop />
+                    <FontAwesomeIcon icon={faDesktop} />
                   </Icon>
                 </SkillIcon>
               </H1>

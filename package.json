@@ -17,6 +17,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-brands-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.2.0",
     "@vanilla-extract/css": "^1.18.0",
     "@vanilla-extract/dynamic": "^2.1.5",
     "@vanilla-extract/recipes": "^0.5.7",
@@ -27,7 +31,6 @@
     "polished": "^4.3.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-icons": "^5.5.0",
     "sharp": "^0.34.5",
     "stemr": "^1.0.0"
   },
