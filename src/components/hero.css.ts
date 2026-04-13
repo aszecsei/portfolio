@@ -4,14 +4,11 @@ import * as tokens from '@/styles/tokens.css'
 import { getFontSize } from '@/styles/typography.css'
 
 export const heroImage = style({
-  backgroundImage:
-    "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/static/img/controller.jpg')",
   height: '100vh',
-  backgroundPosition: 'center',
-  backgroundRepeat: 'no-repeat',
-  backgroundSize: 'cover',
   position: 'relative',
   zIndex: 0,
+  overflow: 'hidden',
+  backgroundColor: '#0a0a0a',
 })
 
 export const heroText = style({

@@ -1,3 +1,5 @@
+'use client'
+
 import {
   faBluesky,
   faGithub,
@@ -9,10 +11,14 @@ import {
 import { faEnvelope } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import * as styles from './hero.css'
+import { HeroShader } from './hero-shader'
 import { Icon } from './icon'
 
 export const HeroImage = ({ children }: { children?: React.ReactNode }) => (
-  <div className={styles.heroImage}>{children}</div>
+  <div className={styles.heroImage}>
+    <HeroShader />
+    {children}
+  </div>
 )
 
 export const HeroText = ({ children }: { children?: React.ReactNode }) => (
