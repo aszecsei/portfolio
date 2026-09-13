@@ -118,6 +118,8 @@ out vec4 fragColor;
 uniform sampler3D uNoise;
 uniform float uTime;
 uniform vec2 uResolution;
+uniform vec2 uMouse;
+uniform float uFlySpeed;
 
 ${COMMON_GLSL}
 
@@ -147,35 +149,55 @@ vec3 rampTeal(float e) {
   return mix(c, c4, smoothstep(0.80, 1.00, e));
 }
 
+const int NEB_LAYERS = 4;
+const float NZ_FAR = 1.6;
+const float NZ_NEAR = 0.45;
+
 void main() {
-  // 4% overscan so the composite pass can parallax-shift the nebula.
+  // 4% overscan so the composite pass has slack at the edges.
   vec2 uv = (vUV - 0.5) * 1.04 + 0.5;
   float aspect = uResolution.x / uResolution.y;
-  vec2 q = vec2(uv.x * aspect, uv.y);
+  vec2 s = (uv - 0.5) * vec2(aspect, 1.0);
   float t = uTime;
 
-  vec4 w = N(vec3(q * 0.35, t * 0.010));
-  vec2 warp = (w.rg - 0.5) * 0.6;
-  vec2 qw = q + warp;
+  // Distant, dim backdrop that does not move.
+  float far = N(vec3(rot(0.75) * (s * 1.4 + 0.5) * 0.30, 9.9 + t * 0.0018)).b;
+  vec3 col = vec3(0.02, 0.03, 0.10) * smoothstep(0.30, 0.90, far) * 0.5;
 
-  float dens  = N(vec3(rot(0.40) * qw * 0.55, 7.3 + t * 0.014)).b;
-  float ridge = N(vec3(rot(1.10) * qw * 1.30, 2.1 + t * 0.020)).a;
-  float dust  = N(vec3(rot(2.00) * (q + warp * 0.5) * 1.00, 4.6 + t * 0.008)).b;
-  float far   = N(vec3(rot(0.75) * q * 0.30, 9.9 + t * 0.006)).b;
+  // Depth slices, far to near. Each slice is sampled in world space at its
+  // depth, so near slices project larger and expand faster as the camera
+  // advances. A slice is re-seeded when it wraps back to the far plane.
+  for (int i = 0; i < NEB_LAYERS; i++) {
+    float fi = float(i);
+    float cycle = t * uFlySpeed + fi / float(NEB_LAYERS) + 0.37;
+    float phase = fract(cycle);
+    float z = mix(NZ_FAR, NZ_NEAR, phase);
+    float zo = fi * 13.7 + floor(cycle) * 29.1;
+    vec2 q = s * z + uMouse * 0.06 + vec2(fi * 3.1, fi * 1.7);
 
-  float body = smoothstep(0.42, 0.90, dens);
-  float fil = pow(ridge, 4.0) * smoothstep(0.38, 0.72, dens);
-  float e = clamp(body * 0.60 + fil * 0.50, 0.0, 1.0);
+    vec4 w = N(vec3(q * 0.28, zo + t * 0.0030));
+    vec2 warp = (w.rg - 0.5) * 0.6;
+    vec2 qw = q + warp;
+    float dens = N(vec3(rot(0.40 + fi) * qw * 0.45, zo + 7.3 + t * 0.0040)).b;
+    float ridge = N(vec3(rot(1.10 + fi) * qw * 1.00, zo + 2.1 + t * 0.0060)).a;
+    float dust = N(vec3(rot(2.00 + fi) * (q + warp * 0.5) * 0.80, zo + 4.6 + t * 0.0025)).b;
 
-  float lane = smoothstep(0.58, 0.82, dust);
-  e *= 1.0 - 0.85 * lane;
+    float body = smoothstep(0.48, 0.88, dens);
+    float fil = pow(ridge, 4.0) * smoothstep(0.42, 0.74, dens);
+    float e = clamp(body * 0.60 + fil * 0.70, 0.0, 1.0);
 
-  float hue = smoothstep(0.35, 0.65, w.b);
-  vec3 col = mix(rampMagenta(e), rampTeal(e), hue) * 0.7;
-  col = mix(col, vec3(0.006, 0.003, 0.002), lane * body * 0.6);
+    float lane = smoothstep(0.58, 0.82, dust);
+    e *= 1.0 - 0.85 * lane;
 
-  vec3 farCol = vec3(0.02, 0.03, 0.10) * smoothstep(0.30, 0.90, far) * 0.5;
-  col += farCol * (1.0 - body * 0.5);
+    float hue = smoothstep(0.35, 0.65, w.b);
+    vec3 em = mix(rampMagenta(e), rampTeal(e), hue) * 0.7;
+    em = mix(em, vec3(0.006, 0.003, 0.002), lane * body * 0.6);
+
+    float fade = smoothstep(0.0, 0.2, phase) * smoothstep(1.0, 0.8, phase);
+    // Dust in this slice absorbs light from the slices behind it.
+    float absorb = lane * body * 0.5 * fade;
+    col = col * (1.0 - absorb) + em * fade * 0.5;
+  }
 
   float vig = smoothstep(0.35, 1.05, length((uv - 0.5) * vec2(1.0, 1.3)));
   col *= 1.0 - 0.7 * vig;
@@ -200,6 +222,7 @@ uniform vec2 uResolution;
 uniform vec2 uMouse;
 uniform float uPixelScale; // device pixels per CSS pixel
 uniform float uExposure;
+uniform float uFlySpeed; // layer cycles per second; 0 = static field
 
 ${COMMON_GLSL}
 
@@ -215,50 +238,65 @@ float twinkle(float t, float ph, float rate, float amt) {
   return 1.0 - amt * (0.5 + 0.5 * s);
 }
 
-// One candidate star per grid cell. Coordinates are CSS pixels so density and
-// size are independent of DPR. Translation happens before floor(), so the
-// field is infinite and moves continuously.
-vec3 starLayer(
-  vec2 css, float cell, float density, float depth, float ang, uint seed,
-  float t, float px, float jitter, float magExp, bool bright
-) {
-  vec2 p = rot(ang) * (css + (uMouse * 18.0 + vec2(1.5, 0.55) * t) * depth);
-  p /= cell;
+// Perspective star field. Each layer is a plane of stars at world depth z;
+// the camera moves forward, so z shrinks over time, stars project outward
+// from the screen centre and grow as they approach. When a layer wraps back
+// to the far plane it is re-seeded, so the pattern never repeats.
+const int STAR_LAYERS = 7;
+const float Z_NEAR = 0.12;
+const float Z_FAR = 1.0;
+const float CELL_WORLD = 44.0; // CSS px per cell at z = 1
+
+vec3 starLayer(int i, vec2 css, vec2 center, float t, float px) {
+  float fi = float(i);
+  float cycle = t * uFlySpeed + fi / float(STAR_LAYERS);
+  float phase = fract(cycle);
+  uint seed = uint(i) * 131u + uint(floor(cycle)) * 7u;
+  float z = mix(Z_FAR, Z_NEAR, phase);
+
+  // Lateral camera offset from the mouse: near stars shift more.
+  vec2 world = (css - center) * z + uMouse * 40.0;
+  vec2 p = rot(fi * 0.7) * world / CELL_WORLD;
   vec2 cid = floor(p);
   vec2 f = p - cid;
 
   uvec4 h = pcg4d(uvec4(uvec2(ivec2(cid) + 0x8000), seed, 0u));
   vec4 r = vec4(h) * (1.0 / 4294967295.0);
-  if (r.w > density) return vec3(0.0);
+  if (r.w > 0.38) return vec3(0.0);
 
   float temp = float(h.x >> 16u) * (1.0 / 65535.0);
   float ph = float(h.x & 0xffffu) * (1.0 / 65535.0) * 6.2831;
-  vec2 pos = 0.5 + (r.xy - 0.5) * jitter;
-  vec2 rel = (f - pos) * cell * px;
+  vec2 pos = 0.5 + (r.xy - 0.5) * 0.6;
+  float cellPx = CELL_WORLD / z * px; // device px per cell on screen
+  vec2 rel = (f - pos) * cellPx;
   float d = length(rel);
 
-  float mag = pow(r.z, magExp);
-  float sigma = max(0.55, (0.4 + 0.8 * mag) * px);
+  float mag = pow(r.z, 3.0);
+  bool bright = r.z > 0.985;
+
+  // Apparent size grows as the star approaches.
+  float grow = pow(1.0 / z, 0.6) * 0.5;
+  float sigma = max(0.55, (0.35 + 0.7 * mag) * px * grow);
   float core = exp(-d * d / (2.0 * sigma * sigma));
   float tail = 0.03 * mag * exp(-d / (3.0 * sigma));
 
-  // Circular window that reaches zero before the nearest cell edge, so no
-  // star is ever clipped by its cell.
   float rmax = min(min(pos.x, 1.0 - pos.x), min(pos.y, 1.0 - pos.y));
   float win = smoothstep(rmax, rmax * 0.6, length(f - pos));
 
+  // Fade in at the far plane, out before the wrap at the near plane.
+  float fade = smoothstep(0.0, 0.25, phase) * smoothstep(1.0, 0.82, phase);
   float tw = twinkle(t, ph, 1.2 + 2.5 * r.y, 0.15 + 0.3 * r.x);
-  float I = (0.03 + 1.6 * mag) * tw;
+  float I = (0.03 + 1.4 * mag) * tw * fade;
   vec3 tint = starTemp(pow(temp, 1.3));
   vec3 c = tint * (core + tail);
 
   if (bright) {
-    float hr = (7.0 + 18.0 * mag) * px;
-    float halo = 0.10 * mag / (1.0 + (d * d) / (hr * hr));
+    float hr = (4.0 + 10.0 * mag) * px * grow;
+    float halo = 0.10 / (1.0 + (d * d) / (hr * hr));
     halo *= halo;
     float spk = exp(-abs(rel.x) * 0.20 / px) * exp(-abs(rel.y) * 1.2 / px)
               + exp(-abs(rel.y) * 0.20 / px) * exp(-abs(rel.x) * 1.2 / px);
-    spk *= exp(-d * 0.05 / px) * 0.25 * smoothstep(0.55, 0.9, mag);
+    spk *= exp(-d * 0.05 / px) * 0.25;
     c += tint * (halo * 4.0 + spk);
     I *= 2.5;
   }
@@ -276,7 +314,7 @@ void main() {
   vec2 css = gl_FragCoord.xy / px;
   float aspect = uResolution.x / uResolution.y;
 
-  vec2 nuv = (vUV - 0.5) / 1.04 + 0.5 + uMouse * 6.0 * px / uResolution;
+  vec2 nuv = (vUV - 0.5) / 1.04 + 0.5;
   vec3 neb = texture(uNebula, nuv).rgb;
   neb *= neb;
 
@@ -284,11 +322,12 @@ void main() {
   vec2 lq = (vUV - 0.5) * vec2(aspect, 1.0) / vec2(0.55, 0.30);
   float leg = 1.0 - 0.55 * smoothstep(1.0, 0.0, dot(lq, lq));
 
-  vec3 stars =
-      starLayer(css, 26.0, 0.30, 0.20, 0.00, 1u, uTime, px, 0.7, 4.0, false)
-    + starLayer(css, 40.0, 0.30, 0.45, 0.41, 2u, uTime, px, 0.7, 4.0, false)
-    + starLayer(css, 64.0, 0.30, 0.80, 0.83, 3u, uTime, px, 0.7, 4.0, false)
-    + starLayer(css, 220.0, 0.22, 0.60, 1.24, 4u, uTime, px, 0.5, 1.5, true) * mix(leg, 1.0, 0.4);
+  vec2 center = uResolution * 0.5 / px;
+  vec3 stars = vec3(0.0);
+  for (int i = 0; i < STAR_LAYERS; i++) {
+    stars += starLayer(i, css, center, uTime, px);
+  }
+  stars *= mix(leg, 1.0, 0.6);
 
   vec3 col = neb * leg + stars;
   col = 1.0 - exp(-col * uExposure);

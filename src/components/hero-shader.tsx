@@ -12,6 +12,7 @@ import {
 const NOISE_SIZE = 64
 const NEBULA_SCALE = 0.5
 const EXPOSURE = 1.6
+const FLY_SPEED = 0.04
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
 // --- WebGL helpers ---
@@ -194,7 +195,7 @@ interface GLResources {
   nebulaProgram: WebGLProgram
   compositeProgram: WebGLProgram
   nebulaUniforms: Record<
-    'uNoise' | 'uTime' | 'uResolution',
+    'uNoise' | 'uTime' | 'uResolution' | 'uMouse' | 'uFlySpeed',
     WebGLUniformLocation | null
   >
   compositeUniforms: Record<
@@ -204,7 +205,8 @@ interface GLResources {
     | 'uResolution'
     | 'uMouse'
     | 'uPixelScale'
-    | 'uExposure',
+    | 'uExposure'
+    | 'uFlySpeed',
     WebGLUniformLocation | null
   >
   nebulaFBO: FBO | null
@@ -235,6 +237,13 @@ function detectLowPower(): boolean {
   return coarse.matches || (navigator.hardwareConcurrency ?? 8) <= 4
 }
 
+// Dev-only override: ?fly=0 for a static field, ?fly=0.1 for a faster run.
+function devFlySpeed(): number {
+  if (!IS_DEV) return FLY_SPEED
+  const v = new URLSearchParams(location.search).get('fly')
+  return v === null || Number.isNaN(Number(v)) ? FLY_SPEED : Number(v)
+}
+
 function startHeroShader(
   canvas: HTMLCanvasElement,
   callbacks: RuntimeCallbacks,
@@ -243,6 +252,7 @@ function startHeroShader(
   const dprCap = lowPower ? 1.5 : 2
   const targetFrameMs = 1000 / (lowPower ? 30 : 60)
   const nebulaEvery = lowPower ? 3 : 2
+  const flySpeed = devFlySpeed()
 
   let res: GLResources | null = null
   let disposed = false
@@ -328,6 +338,8 @@ function startHeroShader(
           'uNoise',
           'uTime',
           'uResolution',
+          'uMouse',
+          'uFlySpeed',
         ] as const),
         compositeUniforms: getUniforms(gl, compositeProgram, [
           'uNebula',
@@ -337,6 +349,7 @@ function startHeroShader(
           'uMouse',
           'uPixelScale',
           'uExposure',
+          'uFlySpeed',
         ] as const),
         nebulaFBO: null,
         timer: debug ? createGpuTimer(gl) : null,
@@ -426,6 +439,8 @@ function startHeroShader(
       gl.uniform1i(nebulaUniforms.uNoise, 0)
       gl.uniform1f(nebulaUniforms.uTime, time)
       gl.uniform2f(nebulaUniforms.uResolution, nebula.width, nebula.height)
+      gl.uniform2f(nebulaUniforms.uMouse, mouse.x, mouse.y)
+      gl.uniform1f(nebulaUniforms.uFlySpeed, flySpeed)
       gl.drawArrays(gl.TRIANGLES, 0, 6)
     }
 
@@ -441,6 +456,7 @@ function startHeroShader(
     gl.uniform2f(compositeUniforms.uMouse, mouse.x, mouse.y)
     gl.uniform1f(compositeUniforms.uPixelScale, pixelScale)
     gl.uniform1f(compositeUniforms.uExposure, EXPOSURE)
+    gl.uniform1f(compositeUniforms.uFlySpeed, flySpeed)
     gl.drawArrays(gl.TRIANGLES, 0, 6)
 
     if (timer && timing) {
