@@ -18,5 +18,5 @@ export const fallback = style({
   height: '100%',
   zIndex: 0,
   background:
-    'linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 40%, #0a1a2e 70%, #0a0a0a 100%)',
+    'radial-gradient(ellipse 70% 60% at 30% 75%, #0d2a33 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 75% 30%, #241040 0%, transparent 70%), #0a0a0f',
 })

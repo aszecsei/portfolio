@@ -2,303 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import * as styles from './hero-shader.css'
-
-// --- GLSL Sources ---
-
-const VERTEX_SOURCE = `#version 300 es
-in vec2 aPosition;
-out vec2 vUV;
-void main() {
-  vUV = (aPosition + 1.0) * 0.5;
-  gl_Position = vec4(aPosition, 0.0, 1.0);
-}
-`
-
-// Pass 1: scene (fluid + particles) rendered to FBO
-const SCENE_FRAGMENT = `#version 300 es
-precision highp float;
-
-in vec2 vUV;
-out vec4 fragColor;
-
-uniform float uTime;
-uniform vec2 uResolution;
-uniform vec2 uMouse;
-
-// --- Ashima simplex noise (public domain) ---
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
-vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-float snoise(vec3 v) {
-  const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
-  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-
-  vec3 i = floor(v + dot(v, C.yyy));
-  vec3 x0 = v - i + dot(i, C.xxx);
-
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min(g.xyz, l.zxy);
-  vec3 i2 = max(g.xyz, l.zxy);
-
-  vec3 x1 = x0 - i1 + C.xxx;
-  vec3 x2 = x0 - i2 + C.yyy;
-  vec3 x3 = x0 - D.yyy;
-
-  i = mod289(i);
-  vec4 p = permute(permute(permute(
-    i.z + vec4(0.0, i1.z, i2.z, 1.0))
-    + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-    + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-
-  float n_ = 0.142857142857;
-  vec3 ns = n_ * D.wyz - D.xzx;
-
-  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_);
-
-  vec4 x = x_ * ns.x + ns.yyyy;
-  vec4 y = y_ * ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-
-  vec4 b0 = vec4(x.xy, y.xy);
-  vec4 b1 = vec4(x.zw, y.zw);
-
-  vec4 s0 = floor(b0) * 2.0 + 1.0;
-  vec4 s1 = floor(b1) * 2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-
-  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
-  vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
-
-  vec3 p0 = vec3(a0.xy, h.x);
-  vec3 p1 = vec3(a0.zw, h.y);
-  vec3 p2 = vec3(a1.xy, h.z);
-  vec3 p3 = vec3(a1.zw, h.w);
-
-  vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-  p0 *= norm.x;
-  p1 *= norm.y;
-  p2 *= norm.z;
-  p3 *= norm.w;
-
-  vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
-  m = m * m;
-  return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
-}
-
-// --- FBM (fractal Brownian motion) ---
-float fbm(vec3 p) {
-  float value = 0.0;
-  float amplitude = 0.5;
-  float frequency = 1.0;
-  for (int i = 0; i < 3; i++) {
-    value += amplitude * snoise(p * frequency);
-    amplitude *= 0.5;
-    frequency *= 2.0;
-  }
-  return value;
-}
-
-void main() {
-  vec2 uv = vUV;
-  float aspect = uResolution.x / uResolution.y;
-
-  // Fluid parallax + slow ambient drift
-  float t = uTime * 0.08;
-  vec2 drift = vec2(sin(uTime * 0.015) * 0.01, uTime * 0.003);
-  vec2 fluidUV = uv + uMouse * 0.02 + drift;
-  vec2 fluidCoord = vec2(fluidUV.x * aspect, fluidUV.y);
-
-  // --- Layer 1: Fluid with domain warping ---
-  // First pass: sample noise to distort the coordinates themselves
-  float warpX = snoise(vec3(fluidCoord * 1.5, t * 0.7));
-  float warpY = snoise(vec3(fluidCoord * 1.5 + 10.0, t * 0.6));
-  vec2 warpedCoord = fluidCoord + vec2(warpX, warpY) * 0.08;
-
-  // Second pass: sample FBM on the warped coordinates for organic flow
-  float n1 = fbm(vec3(warpedCoord * 2.0, t));
-  float n2 = fbm(vec3(warpedCoord * 2.0 + 5.0, t * 1.3));
-
-  // Color palette
-  vec3 base = vec3(0.04, 0.04, 0.06);
-  vec3 purple = vec3(0.698, 0.294, 0.937);
-  vec3 cyan = vec3(0.196, 0.631, 0.886);
-
-  vec3 fluid = base;
-  fluid += purple * smoothstep(-0.1, 0.6, n1) * 0.12;
-  fluid += cyan * smoothstep(-0.1, 0.6, n2) * 0.10;
-
-  // Third pass: highlights warped further by previous noise for swirling detail
-  float highlight = fbm(vec3(warpedCoord * 3.0 + n1 * 0.5, t * 0.7));
-  fluid += vec3(0.5, 0.3, 0.7) * smoothstep(0.3, 0.8, highlight) * 0.06;
-
-  // --- Layer 2: Vignette ---
-  vec2 vignetteCenter = vec2(0.5, 0.45);
-  float vignette = distance(uv, vignetteCenter);
-  vignette = smoothstep(0.2, 0.9, vignette);
-  fluid *= 1.0 - vignette * 0.6;
-
-  // --- Layer 3: Glitter / particles at multiple depths ---
-  // 4 layers from far (small parallax) to near (large parallax).
-  // All use high-frequency noise + high exponent for sharp pinpoint specks.
-  const int PARTICLE_LAYERS = 4;
-  float layerParallax[4] = float[](0.0015, 0.003, 0.0055, 0.0085);
-  float layerScale[4] = float[](85.0, 80.0, 75.0, 70.0);
-  float layerSpeed[4] = float[](0.35, 0.28, 0.22, 0.15);
-  float layerBright[4] = float[](1.0, 1.2, 1.4, 1.8);
-  float layerExponent[4] = float[](24.0, 14.0, 14.0, 12.0);
-  vec3 layerTint[4] = vec3[](
-    vec3(0.8, 0.8, 0.9),
-    vec3(0.9, 0.8, 1.0),
-    vec3(0.7, 0.85, 1.0),
-    vec3(1.0, 0.9, 0.95)
-  );
-  // Fly-through: two overlapping cycles offset by half a period, crossfaded
-  float layerFlyRate[4] = float[](0.012, 0.018, 0.025, 0.033);
-  float flyMaxZoom = 0.3;
-  vec2 noiseCenter = vec2(0.5 * aspect, 0.5);
-
-  for (int i = 0; i < PARTICLE_LAYERS; i++) {
-    vec2 pUV = uv + uMouse * layerParallax[i];
-    vec2 pCoord = vec2(pUV.x * aspect, pUV.y);
-
-    for (int p = 0; p < 2; p++) {
-      float phase = fract(uTime * layerFlyRate[i] + float(p) * 0.5);
-      float expand = 1.0 + phase * flyMaxZoom;
-      float fade = smoothstep(0.0, 0.15, phase) * smoothstep(1.0, 0.85, phase);
-
-      vec2 flyCoord = noiseCenter + (pCoord - noiseCenter) / expand;
-
-      float sNoise = snoise(vec3(flyCoord * layerScale[i], uTime * layerSpeed[i] + float(i) * 7.0 + float(p) * 100.0));
-      float sp = pow(max(sNoise, 0.0), layerExponent[i]);
-
-      float mask = smoothstep(0.0, 0.6, snoise(vec3(flyCoord * 4.0 + float(i) * 3.0, uTime * 0.05)));
-      sp *= mask * fade;
-
-      fluid += layerTint[i] * sp * layerBright[i];
-    }
-  }
-
-  fragColor = vec4(fluid, 1.0);
-}
-`
-
-// Pass 2: composite — samples the scene texture with noise-distorted UVs
-const COMPOSITE_FRAGMENT = `#version 300 es
-precision highp float;
-
-in vec2 vUV;
-out vec4 fragColor;
-
-uniform sampler2D uScene;
-uniform float uTime;
-uniform vec2 uResolution;
-
-// Simplex noise (same as scene shader, needed for UV distortion)
-vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
-vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-float snoise(vec3 v) {
-  const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
-  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-
-  vec3 i = floor(v + dot(v, C.yyy));
-  vec3 x0 = v - i + dot(i, C.xxx);
-
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min(g.xyz, l.zxy);
-  vec3 i2 = max(g.xyz, l.zxy);
-
-  vec3 x1 = x0 - i1 + C.xxx;
-  vec3 x2 = x0 - i2 + C.yyy;
-  vec3 x3 = x0 - D.yyy;
-
-  i = mod289(i);
-  vec4 p = permute(permute(permute(
-    i.z + vec4(0.0, i1.z, i2.z, 1.0))
-    + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-    + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-
-  float n_ = 0.142857142857;
-  vec3 ns = n_ * D.wyz - D.xzx;
-
-  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_);
-
-  vec4 x = x_ * ns.x + ns.yyyy;
-  vec4 y = y_ * ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-
-  vec4 b0 = vec4(x.xy, y.xy);
-  vec4 b1 = vec4(x.zw, y.zw);
-
-  vec4 s0 = floor(b0) * 2.0 + 1.0;
-  vec4 s1 = floor(b1) * 2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-
-  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
-  vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
-
-  vec3 p0 = vec3(a0.xy, h.x);
-  vec3 p1 = vec3(a0.zw, h.y);
-  vec3 p2 = vec3(a1.xy, h.z);
-  vec3 p3 = vec3(a1.zw, h.w);
-
-  vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-  p0 *= norm.x;
-  p1 *= norm.y;
-  p2 *= norm.z;
-  p3 *= norm.w;
-
-  vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
-  m = m * m;
-  return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
-}
-
-void main() {
-  vec2 uv = vUV;
-  float aspect = uResolution.x / uResolution.y;
-  vec2 coord = vec2(uv.x * aspect, uv.y);
-
-  // Layered distortion at different scales and speeds
-  float t = uTime * 0.06;
-
-  // Large slow undulation — broad warping like heat haze
-  float d1x = snoise(vec3(coord * 1.2, t * 0.5));
-  float d1y = snoise(vec3(coord * 1.2 + 5.0, t * 0.4));
-
-  // Medium ripple — gives a liquid lens feel
-  float d2x = snoise(vec3(coord * 3.5, t * 0.9 + 20.0));
-  float d2y = snoise(vec3(coord * 3.5 + 8.0, t * 0.8 + 20.0));
-
-  // Fine caustic-like shimmer
-  float d3x = snoise(vec3(coord * 8.0, t * 1.4 + 40.0));
-  float d3y = snoise(vec3(coord * 8.0 + 12.0, t * 1.2 + 40.0));
-
-  // Combine: large amplitude for slow, small for fast
-  vec2 distortion = vec2(
-    d1x * 0.012 + d2x * 0.005 + d3x * 0.002,
-    d1y * 0.012 + d2y * 0.005 + d3y * 0.002
-  );
-
-  vec2 distortedUV = uv + distortion;
-
-  // Clamp to avoid sampling outside texture
-  distortedUV = clamp(distortedUV, 0.0, 1.0);
-
-  fragColor = texture(uScene, distortedUV);
-}
-`
+import {
+  COMPOSITE_FRAGMENT,
+  NEBULA_FRAGMENT,
+  NOISE_BAKE_FRAGMENT,
+  VERTEX_SOURCE,
+} from './hero-shader.glsl'
+
+const NOISE_SIZE = 64
+const NEBULA_SCALE = 0.5
+const EXPOSURE = 1.6
+const IS_DEV = process.env.NODE_ENV !== 'production'
 
 // --- WebGL helpers ---
 
@@ -343,23 +57,41 @@ function createProgram(
   return program
 }
 
-function createFBO(gl: WebGL2RenderingContext, width: number, height: number) {
+function activateProgram(gl: WebGL2RenderingContext, program: WebGLProgram) {
+  // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is WebGL, not a React hook
+  gl.useProgram(program)
+}
+
+function getUniforms<const T extends readonly string[]>(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  names: T,
+): Record<T[number], WebGLUniformLocation | null> {
+  const out = {} as Record<T[number], WebGLUniformLocation | null>
+  for (const name of names) {
+    out[name as T[number]] = gl.getUniformLocation(program, name)
+  }
+  return out
+}
+
+interface FBO {
+  fbo: WebGLFramebuffer
+  texture: WebGLTexture
+  width: number
+  height: number
+}
+
+function createFBO(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number,
+): FBO {
   const fbo = gl.createFramebuffer()
   const texture = gl.createTexture()
-  if (!fbo || !texture) return null
+  if (!fbo || !texture) throw new Error('Failed to create framebuffer')
 
   gl.bindTexture(gl.TEXTURE_2D, texture)
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA8,
-    width,
-    height,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    null,
-  )
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -379,295 +111,562 @@ function createFBO(gl: WebGL2RenderingContext, width: number, height: number) {
   return { fbo, texture, width, height }
 }
 
-// --- Component ---
+function deleteFBO(gl: WebGL2RenderingContext, fbo: FBO) {
+  gl.deleteFramebuffer(fbo.fbo)
+  gl.deleteTexture(fbo.texture)
+}
 
-interface GLState {
-  gl: WebGL2RenderingContext
-  sceneProgram: WebGLProgram
-  compositeProgram: WebGLProgram
-  vao: WebGLVertexArrayObject
-  buffer: WebGLBuffer
-  fbo: WebGLFramebuffer
-  fboTexture: WebGLTexture
-  fboWidth: number
-  fboHeight: number
-  sceneUniforms: {
-    uTime: WebGLUniformLocation | null
-    uResolution: WebGLUniformLocation | null
-    uMouse: WebGLUniformLocation | null
+// Renders the tileable noise volume slice by slice. Runs once per context.
+function bakeNoiseVolume(
+  gl: WebGL2RenderingContext,
+  vao: WebGLVertexArrayObject,
+): WebGLTexture {
+  const texture = gl.createTexture()
+  if (!texture) throw new Error('Failed to create noise texture')
+  gl.bindTexture(gl.TEXTURE_3D, texture)
+  gl.texStorage3D(
+    gl.TEXTURE_3D,
+    1,
+    gl.RGBA8,
+    NOISE_SIZE,
+    NOISE_SIZE,
+    NOISE_SIZE,
+  )
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.REPEAT)
+
+  const program = createProgram(gl, VERTEX_SOURCE, NOISE_BAKE_FRAGMENT)
+  const uSlice = gl.getUniformLocation(program, 'uSlice')
+  const fbo = gl.createFramebuffer()
+  if (!fbo) throw new Error('Failed to create bake framebuffer')
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo)
+  gl.viewport(0, 0, NOISE_SIZE, NOISE_SIZE)
+  activateProgram(gl, program)
+  gl.bindVertexArray(vao)
+  for (let z = 0; z < NOISE_SIZE; z++) {
+    gl.framebufferTextureLayer(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      texture,
+      0,
+      z,
+    )
+    gl.uniform1f(uSlice, (z + 0.5) / NOISE_SIZE)
+    gl.drawArrays(gl.TRIANGLES, 0, 6)
   }
-  compositeUniforms: {
-    uScene: WebGLUniformLocation | null
-    uTime: WebGLUniformLocation | null
-    uResolution: WebGLUniformLocation | null
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+  gl.bindTexture(gl.TEXTURE_3D, null)
+  gl.deleteFramebuffer(fbo)
+  gl.deleteProgram(program)
+  return texture
+}
+
+// --- Runtime ---
+
+interface DebugInfo {
+  frames: number
+  running: boolean
+  renderScale: number
+  lowPower: boolean
+  gpuMs: number
+}
+
+declare global {
+  interface Window {
+    __heroShader?: DebugInfo
   }
 }
 
+interface RuntimeCallbacks {
+  onFallback: () => void
+  onRestore: () => void
+}
+
+interface GLResources {
+  gl: WebGL2RenderingContext
+  vao: WebGLVertexArrayObject
+  buffer: WebGLBuffer
+  noise: WebGLTexture
+  nebulaProgram: WebGLProgram
+  compositeProgram: WebGLProgram
+  nebulaUniforms: Record<
+    'uNoise' | 'uTime' | 'uResolution',
+    WebGLUniformLocation | null
+  >
+  compositeUniforms: Record<
+    | 'uNebula'
+    | 'uTime'
+    | 'uFrame'
+    | 'uResolution'
+    | 'uMouse'
+    | 'uPixelScale'
+    | 'uExposure',
+    WebGLUniformLocation | null
+  >
+  nebulaFBO: FBO | null
+  timer: GpuTimer | null
+}
+
+// Optional GPU timing (dev only) via EXT_disjoint_timer_query_webgl2.
+interface GpuTimer {
+  ext: {
+    TIME_ELAPSED_EXT: number
+    GPU_DISJOINT_EXT: number
+  }
+  query: WebGLQuery | null
+  average: number
+}
+
+function createGpuTimer(gl: WebGL2RenderingContext): GpuTimer | null {
+  const ext = gl.getExtension('EXT_disjoint_timer_query_webgl2')
+  if (!ext) return null
+  return { ext, query: null, average: 0 }
+}
+
+function detectLowPower(): boolean {
+  if (IS_DEV && new URLSearchParams(location.search).has('lowpower')) {
+    return true
+  }
+  const coarse = window.matchMedia('(hover: none) and (pointer: coarse)')
+  return coarse.matches || (navigator.hardwareConcurrency ?? 8) <= 4
+}
+
+function startHeroShader(
+  canvas: HTMLCanvasElement,
+  callbacks: RuntimeCallbacks,
+): () => void {
+  const lowPower = detectLowPower()
+  const dprCap = lowPower ? 1.5 : 2
+  const targetFrameMs = 1000 / (lowPower ? 30 : 60)
+  const nebulaEvery = lowPower ? 3 : 2
+
+  let res: GLResources | null = null
+  let disposed = false
+  let rafId = 0
+  let renderScale = lowPower ? 0.85 : 1
+  let dpr = Math.min(window.devicePixelRatio || 1, dprCap)
+  let needsResize = true
+  let intersecting = true
+  let prefersReducedMotion = false
+  let time = 0
+  let frame = 0
+  let lastRaf = 0
+  let lastDraw = -Infinity
+  let nebulaDirty = true
+
+  // Adaptive scale bookkeeping
+  const warmupMs = 2000
+  let startedAt = 0
+  let intervalSum = 0
+  let intervalCount = 0
+  let scaleSteps = 0
+
+  const mouse = { x: 0, y: 0 }
+  const mouseTarget = { x: 0, y: 0 }
+
+  const debug: DebugInfo | null = IS_DEV
+    ? { frames: 0, running: false, renderScale, lowPower, gpuMs: 0 }
+    : null
+  if (debug) window.__heroShader = debug
+
+  const gl = canvas.getContext('webgl2', {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    powerPreference: 'low-power',
+  })
+  if (!gl) {
+    callbacks.onFallback()
+    return () => {}
+  }
+
+  function fail(err: unknown) {
+    console.error('HeroShader:', err)
+    teardownGL()
+    callbacks.onFallback()
+  }
+
+  function initGL(): boolean {
+    if (!gl) return false
+    try {
+      const vao = gl.createVertexArray()
+      const buffer = gl.createBuffer()
+      if (!vao || !buffer) throw new Error('Failed to create geometry')
+      gl.bindVertexArray(vao)
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+        gl.STATIC_DRAW,
+      )
+      // All programs share the same single-attribute layout at location 0.
+      gl.enableVertexAttribArray(0)
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
+      gl.bindVertexArray(null)
+
+      const nebulaProgram = createProgram(gl, VERTEX_SOURCE, NEBULA_FRAGMENT)
+      const compositeProgram = createProgram(
+        gl,
+        VERTEX_SOURCE,
+        COMPOSITE_FRAGMENT,
+      )
+      const noise = bakeNoiseVolume(gl, vao)
+
+      res = {
+        gl,
+        vao,
+        buffer,
+        noise,
+        nebulaProgram,
+        compositeProgram,
+        nebulaUniforms: getUniforms(gl, nebulaProgram, [
+          'uNoise',
+          'uTime',
+          'uResolution',
+        ] as const),
+        compositeUniforms: getUniforms(gl, compositeProgram, [
+          'uNebula',
+          'uTime',
+          'uFrame',
+          'uResolution',
+          'uMouse',
+          'uPixelScale',
+          'uExposure',
+        ] as const),
+        nebulaFBO: null,
+        timer: debug ? createGpuTimer(gl) : null,
+      }
+      needsResize = true
+      nebulaDirty = true
+      return true
+    } catch (err) {
+      fail(err)
+      return false
+    }
+  }
+
+  function teardownGL() {
+    if (!res) return
+    const { gl } = res
+    if (res.nebulaFBO) deleteFBO(gl, res.nebulaFBO)
+    if (res.timer?.query) gl.deleteQuery(res.timer.query)
+    gl.deleteTexture(res.noise)
+    gl.deleteBuffer(res.buffer)
+    gl.deleteVertexArray(res.vao)
+    gl.deleteProgram(res.nebulaProgram)
+    gl.deleteProgram(res.compositeProgram)
+    res = null
+  }
+
+  // --- Sizing ---
+
+  function applySize() {
+    if (!res) return
+    const { gl } = res
+    const scale = dpr * renderScale
+    const w = Math.max(1, Math.floor(canvas.clientWidth * scale))
+    const h = Math.max(1, Math.floor(canvas.clientHeight * scale))
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w
+      canvas.height = h
+    }
+    const nw = Math.max(1, Math.ceil(w * NEBULA_SCALE))
+    const nh = Math.max(1, Math.ceil(h * NEBULA_SCALE))
+    if (
+      !res.nebulaFBO ||
+      res.nebulaFBO.width !== nw ||
+      res.nebulaFBO.height !== nh
+    ) {
+      if (res.nebulaFBO) deleteFBO(gl, res.nebulaFBO)
+      res.nebulaFBO = createFBO(gl, nw, nh)
+    }
+    nebulaDirty = true
+  }
+
+  // --- Drawing ---
+
+  function drawFrame() {
+    if (!res) return
+    const { gl, vao, nebulaUniforms, compositeUniforms, timer } = res
+
+    if (needsResize) {
+      needsResize = false
+      applySize()
+    }
+    const nebula = res.nebulaFBO
+    if (!nebula) return
+
+    const width = gl.drawingBufferWidth
+    const height = gl.drawingBufferHeight
+    const pixelScale = dpr * renderScale
+
+    let timing = false
+    if (timer && !timer.query) {
+      timer.query = gl.createQuery()
+      if (timer.query) {
+        gl.beginQuery(timer.ext.TIME_ELAPSED_EXT, timer.query)
+        timing = true
+      }
+    }
+
+    gl.bindVertexArray(vao)
+
+    if (nebulaDirty || frame % nebulaEvery === 0) {
+      nebulaDirty = false
+      gl.bindFramebuffer(gl.FRAMEBUFFER, nebula.fbo)
+      gl.viewport(0, 0, nebula.width, nebula.height)
+      activateProgram(gl, res.nebulaProgram)
+      gl.activeTexture(gl.TEXTURE0)
+      gl.bindTexture(gl.TEXTURE_3D, res.noise)
+      gl.uniform1i(nebulaUniforms.uNoise, 0)
+      gl.uniform1f(nebulaUniforms.uTime, time)
+      gl.uniform2f(nebulaUniforms.uResolution, nebula.width, nebula.height)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    gl.viewport(0, 0, width, height)
+    activateProgram(gl, res.compositeProgram)
+    gl.activeTexture(gl.TEXTURE1)
+    gl.bindTexture(gl.TEXTURE_2D, nebula.texture)
+    gl.uniform1i(compositeUniforms.uNebula, 1)
+    gl.uniform1f(compositeUniforms.uTime, time)
+    gl.uniform1f(compositeUniforms.uFrame, frame % 64)
+    gl.uniform2f(compositeUniforms.uResolution, width, height)
+    gl.uniform2f(compositeUniforms.uMouse, mouse.x, mouse.y)
+    gl.uniform1f(compositeUniforms.uPixelScale, pixelScale)
+    gl.uniform1f(compositeUniforms.uExposure, EXPOSURE)
+    gl.drawArrays(gl.TRIANGLES, 0, 6)
+
+    if (timer && timing) {
+      gl.endQuery(timer.ext.TIME_ELAPSED_EXT)
+    }
+    frame++
+    if (debug) debug.frames = frame
+  }
+
+  function pollGpuTimer() {
+    if (!res?.timer?.query || !debug) return
+    const { gl, timer } = res
+    const query = timer.query as WebGLQuery
+    const available = gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)
+    const disjoint = gl.getParameter(timer.ext.GPU_DISJOINT_EXT)
+    if (available && !disjoint) {
+      const ns = gl.getQueryParameter(query, gl.QUERY_RESULT) as number
+      const ms = ns / 1e6
+      timer.average = timer.average === 0 ? ms : timer.average * 0.9 + ms * 0.1
+      debug.gpuMs = timer.average
+    }
+    if (available || disjoint) {
+      gl.deleteQuery(query)
+      timer.query = null
+    }
+  }
+
+  function renderOnce() {
+    if (!res) return
+    time = 0
+    drawFrame()
+  }
+
+  // --- Loop ---
+
+  function shouldRun() {
+    return (
+      res !== null &&
+      !disposed &&
+      intersecting &&
+      !document.hidden &&
+      !prefersReducedMotion
+    )
+  }
+
+  function syncLoop() {
+    const run = shouldRun()
+    if (debug) debug.running = run
+    if (run && !rafId) {
+      lastRaf = 0
+      startedAt = performance.now()
+      intervalSum = 0
+      intervalCount = 0
+      rafId = requestAnimationFrame(tick)
+    } else if (!run && rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = 0
+    }
+  }
+
+  function tick(now: number) {
+    rafId = 0
+    if (!shouldRun()) return
+    rafId = requestAnimationFrame(tick)
+
+    if (lastRaf !== 0) {
+      const dt = Math.min((now - lastRaf) / 1000, 0.1)
+      time += dt
+      if (now - startedAt > warmupMs) {
+        intervalSum += now - lastRaf
+        intervalCount++
+        if (intervalCount >= 60) {
+          const mean = intervalSum / intervalCount
+          intervalSum = 0
+          intervalCount = 0
+          if (
+            mean > targetFrameMs * 1.6 &&
+            scaleSteps < 3 &&
+            renderScale > 0.5
+          ) {
+            renderScale = Math.max(0.5, renderScale - 0.15)
+            scaleSteps++
+            needsResize = true
+            if (debug) debug.renderScale = renderScale
+          }
+        }
+      }
+    }
+    lastRaf = now
+
+    if (now - lastDraw < targetFrameMs - 2) return
+    lastDraw = now
+
+    mouse.x += (mouseTarget.x - mouse.x) * 0.05
+    mouse.y += (mouseTarget.y - mouse.y) * 0.05
+
+    pollGpuTimer()
+    drawFrame()
+  }
+
+  // --- Environment listeners ---
+
+  const reducedMotionQuery = window.matchMedia(
+    '(prefers-reduced-motion: reduce)',
+  )
+  prefersReducedMotion = reducedMotionQuery.matches
+  function onReducedMotionChange(e: MediaQueryListEvent) {
+    prefersReducedMotion = e.matches
+    syncLoop()
+    if (prefersReducedMotion) renderOnce()
+  }
+  reducedMotionQuery.addEventListener('change', onReducedMotionChange)
+
+  let dprQuery: MediaQueryList | null = null
+  function watchDpr() {
+    dprQuery?.removeEventListener('change', onDprChange)
+    dprQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+    dprQuery.addEventListener('change', onDprChange)
+  }
+  function onDprChange() {
+    dpr = Math.min(window.devicePixelRatio || 1, dprCap)
+    needsResize = true
+    watchDpr()
+    if (!rafId) renderOnce()
+  }
+  watchDpr()
+
+  const resizeObserver = new ResizeObserver(() => {
+    needsResize = true
+    if (!rafId) renderOnce()
+  })
+  resizeObserver.observe(canvas)
+
+  const intersectionObserver = new IntersectionObserver(
+    ([entry]) => {
+      intersecting = entry.isIntersecting
+      syncLoop()
+    },
+    { threshold: 0 },
+  )
+  intersectionObserver.observe(canvas)
+
+  function onVisibilityChange() {
+    syncLoop()
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange)
+
+  function setMouseTarget(clientX: number, clientY: number) {
+    mouseTarget.x = (clientX / window.innerWidth) * 2 - 1
+    mouseTarget.y = -((clientY / window.innerHeight) * 2 - 1)
+  }
+  function onMouseMove(e: MouseEvent) {
+    setMouseTarget(e.clientX, e.clientY)
+  }
+  function onTouchMove(e: TouchEvent) {
+    const touch = e.touches[0]
+    if (touch) setMouseTarget(touch.clientX, touch.clientY)
+  }
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+  window.addEventListener('touchmove', onTouchMove, { passive: true })
+
+  function onContextLost(e: Event) {
+    e.preventDefault()
+    if (rafId) cancelAnimationFrame(rafId)
+    rafId = 0
+    // Resources are gone with the context; just drop our references.
+    res = null
+    callbacks.onFallback()
+  }
+  function onContextRestored() {
+    if (disposed) return
+    if (initGL()) {
+      callbacks.onRestore()
+      renderOnce()
+      syncLoop()
+    }
+  }
+  canvas.addEventListener('webglcontextlost', onContextLost)
+  canvas.addEventListener('webglcontextrestored', onContextRestored)
+
+  // --- Start ---
+
+  if (initGL()) {
+    renderOnce()
+    syncLoop()
+  }
+
+  return () => {
+    disposed = true
+    if (rafId) cancelAnimationFrame(rafId)
+    rafId = 0
+    resizeObserver.disconnect()
+    intersectionObserver.disconnect()
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('touchmove', onTouchMove)
+    canvas.removeEventListener('webglcontextlost', onContextLost)
+    canvas.removeEventListener('webglcontextrestored', onContextRestored)
+    reducedMotionQuery.removeEventListener('change', onReducedMotionChange)
+    dprQuery?.removeEventListener('change', onDprChange)
+    teardownGL()
+    if (debug && window.__heroShader === debug) {
+      window.__heroShader = undefined
+    }
+  }
+}
+
+// --- Component ---
+
 export function HeroShader() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const glStateRef = useRef<GLState | null>(null)
-  const rafRef = useRef<number>(0)
-  const visibleRef = useRef(true)
-  const mouseRef = useRef({ x: 0, y: 0 })
-  const mouseTargetRef = useRef({ x: 0, y: 0 })
-  const startTimeRef = useRef(0)
-  const needsResizeRef = useRef(false)
   const [useFallback, setUseFallback] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
-    // Attempt WebGL2 context
-    const gl = canvas.getContext('webgl2', {
-      alpha: false,
-      antialias: false,
-      powerPreference: 'default',
+    return startHeroShader(canvas, {
+      onFallback: () => setUseFallback(true),
+      onRestore: () => setUseFallback(false),
     })
-    if (!gl) {
-      setUseFallback(true)
-      return
-    }
-
-    // Build programs
-    let sceneProgram: WebGLProgram
-    let compositeProgram: WebGLProgram
-    try {
-      sceneProgram = createProgram(gl, VERTEX_SOURCE, SCENE_FRAGMENT)
-      compositeProgram = createProgram(gl, VERTEX_SOURCE, COMPOSITE_FRAGMENT)
-    } catch (e) {
-      console.error('HeroShader:', e)
-      setUseFallback(true)
-      return
-    }
-
-    // Shared fullscreen quad geometry
-    const vao = gl.createVertexArray()
-    const buffer = gl.createBuffer()
-    if (!vao || !buffer) {
-      setUseFallback(true)
-      return
-    }
-    gl.bindVertexArray(vao)
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-    const vertices = new Float32Array([
-      -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
-    ])
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
-    // Bind aPosition for both programs (same layout)
-    const posLoc = gl.getAttribLocation(sceneProgram, 'aPosition')
-    gl.enableVertexAttribArray(posLoc)
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
-    gl.bindVertexArray(null)
-
-    const sceneUniforms = {
-      uTime: gl.getUniformLocation(sceneProgram, 'uTime'),
-      uResolution: gl.getUniformLocation(sceneProgram, 'uResolution'),
-      uMouse: gl.getUniformLocation(sceneProgram, 'uMouse'),
-    }
-    const compositeUniforms = {
-      uScene: gl.getUniformLocation(compositeProgram, 'uScene'),
-      uTime: gl.getUniformLocation(compositeProgram, 'uTime'),
-      uResolution: gl.getUniformLocation(compositeProgram, 'uResolution'),
-    }
-
-    // --- Sizing ---
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-
-    function getPixelSize() {
-      if (!canvas) return { w: 1, h: 1 }
-      return {
-        w: Math.floor(canvas.clientWidth * dpr),
-        h: Math.floor(canvas.clientHeight * dpr),
-      }
-    }
-
-    // Initial FBO
-    const { w: initW, h: initH } = getPixelSize()
-    canvas.width = initW
-    canvas.height = initH
-    const fboState = createFBO(gl, initW, initH)
-    if (!fboState) {
-      setUseFallback(true)
-      return
-    }
-
-    glStateRef.current = {
-      gl,
-      sceneProgram,
-      compositeProgram,
-      vao,
-      buffer,
-      fbo: fboState.fbo,
-      fboTexture: fboState.texture,
-      fboWidth: fboState.width,
-      fboHeight: fboState.height,
-      sceneUniforms,
-      compositeUniforms,
-    }
-
-    // --- Reduced motion ---
-    const reducedMotionQuery = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    )
-    let prefersReducedMotion = reducedMotionQuery.matches
-    function onReducedMotionChange(e: MediaQueryListEvent) {
-      prefersReducedMotion = e.matches
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(render)
-    }
-    reducedMotionQuery.addEventListener('change', onReducedMotionChange)
-
-    function resize() {
-      needsResizeRef.current = true
-      // When animation is paused, still redraw once so the frame matches the new size
-      if (prefersReducedMotion) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = requestAnimationFrame(render)
-      }
-    }
-
-    resize()
-    const resizeObserver = new ResizeObserver(resize)
-    resizeObserver.observe(canvas)
-
-    // --- Visibility ---
-    const intersectionObserver = new IntersectionObserver(
-      ([entry]) => {
-        visibleRef.current = entry.isIntersecting
-      },
-      { threshold: 0 },
-    )
-    intersectionObserver.observe(canvas)
-
-    // --- Mouse ---
-    function onMouseMove(e: MouseEvent) {
-      mouseTargetRef.current.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouseTargetRef.current.y = -((e.clientY / window.innerHeight) * 2 - 1)
-    }
-    function onTouchMove(e: TouchEvent) {
-      const touch = e.touches[0]
-      if (!touch) return
-      mouseTargetRef.current.x = (touch.clientX / window.innerWidth) * 2 - 1
-      mouseTargetRef.current.y = -((touch.clientY / window.innerHeight) * 2 - 1)
-    }
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('touchmove', onTouchMove)
-
-    // --- Context lost/restored ---
-    function onContextLost(e: Event) {
-      e.preventDefault()
-      cancelAnimationFrame(rafRef.current)
-      setUseFallback(true)
-    }
-    function onContextRestored() {
-      setUseFallback(false)
-    }
-    canvas.addEventListener('webglcontextlost', onContextLost)
-    canvas.addEventListener('webglcontextrestored', onContextRestored)
-
-    // --- Render loop ---
-    startTimeRef.current = performance.now()
-
-    function render() {
-      const state = glStateRef.current
-      if (!state) return
-
-      if (visibleRef.current) {
-        const { gl, sceneProgram, compositeProgram, vao } = state
-
-        // Handle resize: rebuild FBO at new size
-        if (needsResizeRef.current && canvas) {
-          needsResizeRef.current = false
-          const { w, h } = getPixelSize()
-          if (w !== state.fboWidth || h !== state.fboHeight) {
-            canvas.width = w
-            canvas.height = h
-            // Delete old FBO resources
-            gl.deleteFramebuffer(state.fbo)
-            gl.deleteTexture(state.fboTexture)
-            const newFbo = createFBO(gl, w, h)
-            if (newFbo) {
-              state.fbo = newFbo.fbo
-              state.fboTexture = newFbo.texture
-              state.fboWidth = newFbo.width
-              state.fboHeight = newFbo.height
-            }
-          }
-        }
-
-        // Lerp mouse
-        mouseRef.current.x +=
-          (mouseTargetRef.current.x - mouseRef.current.x) * 0.05
-        mouseRef.current.y +=
-          (mouseTargetRef.current.y - mouseRef.current.y) * 0.05
-
-        const time = (performance.now() - startTimeRef.current) / 1000
-        const width = gl.drawingBufferWidth
-        const height = gl.drawingBufferHeight
-
-        gl.bindVertexArray(vao)
-
-        // --- Pass 1: render scene to FBO ---
-        gl.bindFramebuffer(gl.FRAMEBUFFER, state.fbo)
-        gl.viewport(0, 0, width, height)
-        // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is WebGL, not a React hook
-        gl.useProgram(sceneProgram)
-        gl.uniform1f(state.sceneUniforms.uTime, time)
-        gl.uniform2f(state.sceneUniforms.uResolution, width, height)
-        gl.uniform2f(
-          state.sceneUniforms.uMouse,
-          mouseRef.current.x,
-          mouseRef.current.y,
-        )
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-
-        // --- Pass 2: composite to screen with distortion ---
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-        gl.viewport(0, 0, width, height)
-        // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is WebGL, not a React hook
-        gl.useProgram(compositeProgram)
-        gl.activeTexture(gl.TEXTURE0)
-        gl.bindTexture(gl.TEXTURE_2D, state.fboTexture)
-        gl.uniform1i(state.compositeUniforms.uScene, 0)
-        gl.uniform1f(state.compositeUniforms.uTime, time)
-        gl.uniform2f(state.compositeUniforms.uResolution, width, height)
-        gl.drawArrays(gl.TRIANGLES, 0, 6)
-      }
-
-      if (!prefersReducedMotion) {
-        rafRef.current = requestAnimationFrame(render)
-      }
-    }
-
-    rafRef.current = requestAnimationFrame(render)
-
-    // --- Cleanup ---
-    return () => {
-      cancelAnimationFrame(rafRef.current)
-      resizeObserver.disconnect()
-      intersectionObserver.disconnect()
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('touchmove', onTouchMove)
-      canvas.removeEventListener('webglcontextlost', onContextLost)
-      canvas.removeEventListener('webglcontextrestored', onContextRestored)
-      reducedMotionQuery.removeEventListener('change', onReducedMotionChange)
-      const state = glStateRef.current
-      if (state) {
-        gl.deleteFramebuffer(state.fbo)
-        gl.deleteTexture(state.fboTexture)
-      }
-      gl.deleteBuffer(buffer)
-      gl.deleteVertexArray(vao)
-      gl.deleteProgram(sceneProgram)
-      gl.deleteProgram(compositeProgram)
-      glStateRef.current = null
-    }
   }, [])
 
-  if (useFallback) {
-    return <div className={styles.fallback} />
-  }
-
-  return <canvas ref={canvasRef} className={styles.canvas} />
+  return (
+    <>
+      <canvas ref={canvasRef} className={styles.canvas} />
+      {useFallback && <div className={styles.fallback} />}
+    </>
+  )
 }
