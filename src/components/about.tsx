@@ -46,10 +46,10 @@ export const About = () => (
         TI-89 graphing calculator.
       </Text>
       <Text>
-        I spent six years working at Microsoft on the Azure Storage team, designing
-        a bespoke tag-based configuration schema to manage feature rollouts across
-        hundreds of datacenters and prototyping a platform-independent driver rewrite
-        from C++ to Rust.
+        I spent six years working at Microsoft on the Azure Storage team, working on
+        projects which ranged from a bespoke tag-based configuration schema that managed
+        feature rollouts across hundreds of datacenters to prototyping an entire
+        platform-independent driver rewrite from C++ to Rust.
       </Text>
       <Text>
         I'm interested in game programming and graphics programming; merging art
