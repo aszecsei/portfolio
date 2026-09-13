@@ -2,6 +2,7 @@ import { globalStyle, style } from '@vanilla-extract/css'
 import { rgba } from 'polished'
 import * as tokens from '@/styles/tokens.css'
 import { getFontSize } from '@/styles/typography.css'
+import { icon } from './icon.css'
 
 const controlRadius = tokens.radius
 const controlBorderWidth = '1px'
@@ -115,7 +116,7 @@ globalStyle(`${controlWithIcon} > input`, {
   paddingLeft: '2.25em',
 })
 
-globalStyle(`${controlWithIcon} > .icon`, {
+globalStyle(`${controlWithIcon} > .${icon.classNames.base}`, {
   color: inputIconColor,
   height: '2.25em',
   pointerEvents: 'none',
@@ -126,6 +127,6 @@ globalStyle(`${controlWithIcon} > .icon`, {
   left: 0,
 })
 
-globalStyle(`${controlWithIcon} > input:focus ~ .icon`, {
+globalStyle(`${controlWithIcon} > input:focus ~ .${icon.classNames.base}`, {
   color: inputIconActiveColor,
 })

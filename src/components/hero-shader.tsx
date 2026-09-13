@@ -506,8 +506,25 @@ export function HeroShader() {
       compositeUniforms,
     }
 
+    // --- Reduced motion ---
+    const reducedMotionQuery = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    )
+    let prefersReducedMotion = reducedMotionQuery.matches
+    function onReducedMotionChange(e: MediaQueryListEvent) {
+      prefersReducedMotion = e.matches
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(render)
+    }
+    reducedMotionQuery.addEventListener('change', onReducedMotionChange)
+
     function resize() {
       needsResizeRef.current = true
+      // When animation is paused, still redraw once so the frame matches the new size
+      if (prefersReducedMotion) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(render)
+      }
     }
 
     resize()
@@ -522,11 +539,6 @@ export function HeroShader() {
       { threshold: 0 },
     )
     intersectionObserver.observe(canvas)
-
-    // --- Reduced motion ---
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches
 
     // --- Mouse ---
     function onMouseMove(e: MouseEvent) {
@@ -639,15 +651,16 @@ export function HeroShader() {
       window.removeEventListener('touchmove', onTouchMove)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       canvas.removeEventListener('webglcontextrestored', onContextRestored)
-      if (fboState) {
-        gl.deleteFramebuffer(fboState.fbo)
-        gl.deleteTexture(fboState.texture)
+      reducedMotionQuery.removeEventListener('change', onReducedMotionChange)
+      const state = glStateRef.current
+      if (state) {
+        gl.deleteFramebuffer(state.fbo)
+        gl.deleteTexture(state.fboTexture)
       }
       gl.deleteBuffer(buffer)
       gl.deleteVertexArray(vao)
       gl.deleteProgram(sceneProgram)
       gl.deleteProgram(compositeProgram)
-      gl.getExtension('WEBGL_lose_context')?.loseContext()
       glStateRef.current = null
     }
   }, [])

@@ -1,22 +1,21 @@
 'use client'
 
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import * as JsSearch from 'js-search'
 import { useMemo, useState } from 'react'
 import { stem } from 'stemr'
 import type { IProject } from '@/models/project'
-import { Column, Columns } from './column'
 import * as Form from './form'
+import { Icon } from './icon'
 import { Project } from './project'
+import * as styles from './projects.css'
+import { H2, Text } from './typography'
 
 interface IProjectsProps {
   projects: IProject[]
-}
-
-const numProjectCols = 3
-export function splitIntoChunks<T>(arr: T[], chunkSize: number) {
-  return arr
-    .map((_, i) => (i % chunkSize === 0 ? arr.slice(i, i + chunkSize) : null))
-    .filter((e) => e)
+  title: string
+  noun: string
 }
 
 const MONTHS: Record<string, number> = {
@@ -39,13 +38,13 @@ function parseProjectDate(dateStr: string): number {
   return new Date(Number.parseInt(year, 10), MONTHS[month] ?? 0).getTime()
 }
 
-function sortProjectsByDate(arr: IProject[]) {
+export function sortProjectsByDate(arr: IProject[]) {
   return [...arr].sort(
     (a, b) => parseProjectDate(b.date) - parseProjectDate(a.date),
   )
 }
 
-export function Projects({ projects }: IProjectsProps) {
+export function Projects({ projects, title, noun }: IProjectsProps) {
   const [filter, setFilter] = useState('')
 
   const search = useMemo(() => {
@@ -64,41 +63,53 @@ export function Projects({ projects }: IProjectsProps) {
     return s
   }, [projects])
 
-  const updateFilter = (e: React.FormEvent<HTMLInputElement>) => {
-    const input = e.target as HTMLInputElement
-    setFilter(input.value)
-  }
+  const query = filter.trim()
+  const visible =
+    query !== ''
+      ? (search.search(query) as IProject[])
+      : sortProjectsByDate(projects)
 
   return (
     <>
-      <Columns>
-        <Column size={4} offsetsize={8}>
-          <Form.Field>
-            <Form.Control>
+      <div className={styles.header}>
+        <div className={styles.heading}>
+          <H2>{title}</H2>
+          <span className={styles.count} aria-hidden="true">
+            {projects.length}
+          </span>
+        </div>
+        <Form.Field>
+          <div className={styles.search}>
+            <Form.Control hasIcon>
               <Form.Input
-                placeholder="Search"
-                type="text"
-                onChange={updateFilter}
-                aria-label="Search"
+                placeholder={`Filter ${noun}`}
+                type="search"
+                value={filter}
+                onChange={(e) => setFilter(e.currentTarget.value)}
+                aria-label={`Filter ${noun}`}
               />
+              <Icon>
+                <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+              </Icon>
             </Form.Control>
-          </Form.Field>
-        </Column>
-      </Columns>
-      {splitIntoChunks(
-        filter !== ''
-          ? (search.search(filter) as IProject[])
-          : sortProjectsByDate(projects),
-        numProjectCols,
-      ).map((value, index) => (
-        <Columns key={value?.[0]?.url ?? index}>
-          {value?.map((project) => (
-            <Column key={project.url} size={12 / numProjectCols}>
-              <Project projectDetails={project} />
-            </Column>
-          ))}
-        </Columns>
-      ))}
+          </div>
+        </Form.Field>
+      </div>
+      <div aria-live="polite">
+        {visible.length === 0 ? (
+          <Text className={styles.empty}>
+            No {noun} match “{query}”.
+          </Text>
+        ) : (
+          <ul className={styles.grid}>
+            {visible.map((project) => (
+              <li key={project.url}>
+                <Project projectDetails={project} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </>
   )
 }

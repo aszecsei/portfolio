@@ -1,13 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useId, useState } from 'react'
+import { blogUrl } from '@/models/links'
 import { navbarContainer } from './container.css'
 import * as styles from './navbar.css'
 
 interface IHamburgerProps {
   dimensions: number
   isActive?: boolean
+  controls: string
   onClick?: () => void
 }
 
@@ -17,6 +19,9 @@ const Hamburger = (props: IHamburgerProps) => (
     className={styles.hamburgerDiv}
     style={{ height: `${props.dimensions}px`, width: `${props.dimensions}px` }}
     onClick={props.onClick}
+    aria-label="Menu"
+    aria-expanded={!!props.isActive}
+    aria-controls={props.controls}
   >
     <span
       className={styles.hamburgerSpan({
@@ -43,20 +48,27 @@ interface INavProps {
   shouldUseScroll?: boolean
 }
 
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth'
+}
+
 function scrollTo(id: string) {
   return (event: React.MouseEvent) => {
     event.preventDefault()
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById(id)?.scrollIntoView({ behavior: scrollBehavior() })
   }
 }
 
 function scrollToTop(event: React.MouseEvent) {
   event.preventDefault()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: scrollBehavior() })
 }
 
 export default function Nav({ shouldUseScroll }: INavProps) {
   const [isActive, setIsActive] = useState(false)
+  const menuId = useId()
 
   return (
     <nav className={styles.navbar}>
@@ -72,11 +84,12 @@ export default function Nav({ shouldUseScroll }: INavProps) {
           <Hamburger
             dimensions={44}
             isActive={isActive}
+            controls={menuId}
             onClick={() => setIsActive(!isActive)}
           />
         </div>
 
-        <div className={styles.navbarCollapse({ isActive })}>
+        <div id={menuId} className={styles.navbarCollapse({ isActive })}>
           <ul className={styles.navbarNav}>
             <li className={styles.navItem}>
               <Link
@@ -125,7 +138,12 @@ export default function Nav({ shouldUseScroll }: INavProps) {
               </a>
             </li>
             <li className={styles.navItem}>
-              <a className={styles.navLink} href="http://blog.alic-szecsei.com">
+              <a
+                className={styles.navLink}
+                href={blogUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Blog
               </a>
             </li>

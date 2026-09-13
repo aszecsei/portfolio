@@ -6,11 +6,11 @@ import { Text } from './typography'
 export const Footer = () => (
   <footer className={styles.foot}>
     <Container>
-      <Text alignment="center">
+      <Text alignment="center" className={styles.line}>
         Copyright <Emoji symbol="©️" /> Alic Szecsei 2016–
         {new Date().getFullYear()}.
       </Text>
-      <Text alignment="center">
+      <Text alignment="center" className={styles.line}>
         Made with <Emoji label="love" symbol="❤️" /> using React and more.
       </Text>
     </Container>

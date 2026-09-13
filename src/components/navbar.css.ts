@@ -1,6 +1,7 @@
 import { style } from '@vanilla-extract/css'
 import { recipe } from '@vanilla-extract/recipes'
 import { mq } from '@/styles/media.css'
+import { motionOk } from '@/styles/motion.css'
 import * as tokens from '@/styles/tokens.css'
 import { getFontSize } from '@/styles/typography.css'
 
@@ -36,7 +37,6 @@ export const navbarBrand = style({
   flexShrink: 0,
   padding: '0.3125em',
   whiteSpace: 'nowrap',
-  outline: 'none',
   textDecoration: 'none',
 })
 
@@ -95,18 +95,35 @@ export const navLink = style({
   ...fontSize5,
   color: tokens.white,
   display: 'block',
+  position: 'relative',
   paddingLeft: '1.25rem',
-  outline: 'none',
-  transition: 'all 0.3s ease-in-out',
+  transition: 'color 0.3s ease-in-out',
   textDecoration: 'none',
+  '::after': {
+    content: '""',
+    position: 'absolute',
+    left: '1.25rem',
+    right: 0,
+    bottom: '-0.15em',
+    height: '2px',
+    backgroundColor: tokens.primary,
+    transform: 'scaleX(0)',
+    transformOrigin: 'left',
+  },
   selectors: {
     '&:hover': {
       color: tokens.primary,
       cursor: 'pointer',
     },
+    '&:hover::after, &:focus-visible::after': {
+      transform: 'scaleX(1)',
+    },
   },
   '@media': {
     ...fontSize5['@media'],
+    [motionOk]: {
+      '::after': { transition: 'transform 0.25s ease-out' },
+    },
     [mq.until('desktop')]: {
       paddingTop: '.5em',
       paddingBottom: '.5em',
@@ -122,7 +139,6 @@ export const navBrandLink = style({
   color: tokens.white,
   display: 'block',
   paddingLeft: '1.25rem',
-  outline: 'none',
   transition: 'all 0.3s ease-in-out',
   textDecoration: 'none',
   selectors: {

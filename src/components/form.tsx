@@ -16,7 +16,9 @@ export const Input = ({
   isRounded,
   isStatic,
   ...rest
-}: IInputProps) => <input className={styles.input} {...rest} />
+}: IInputProps) => (
+  <input className={styles.input} suppressHydrationWarning {...rest} />
+)
 
 export const Help = ({ children }: { children?: ReactNode }) => (
   <p className={styles.help}>{children}</p>
@@ -37,7 +39,10 @@ interface IControlProps {
 }
 
 export const Control = ({ hasIcon, children }: IControlProps) => (
-  <div className={hasIcon ? styles.controlWithIcon : styles.control}>
+  <div
+    className={hasIcon ? styles.controlWithIcon : styles.control}
+    suppressHydrationWarning
+  >
     {children}
   </div>
 )

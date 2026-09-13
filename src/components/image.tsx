@@ -10,6 +10,8 @@ interface IImageProps {
   width?: number
   height?: number
   unoptimized?: boolean
+  fit?: 'cover'
+  className?: string
 }
 
 export const Image = ({
@@ -21,9 +23,13 @@ export const Image = ({
   width = 1200,
   height = 675,
   unoptimized,
+  fit,
+  className,
 }: IImageProps) => (
   <ExportedImage
-    className={imageStyle({ isRounded, hasRoundedCorners })}
+    className={[imageStyle({ isRounded, hasRoundedCorners, fit }), className]
+      .filter(Boolean)
+      .join(' ')}
     alt={alt}
     src={src}
     loading={loading}

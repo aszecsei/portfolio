@@ -17,5 +17,12 @@ export const image = recipe({
     hasRoundedCorners: {
       true: { borderRadius: tokens.radiusLarge },
     },
+    fit: {
+      cover: {
+        margin: 0,
+        height: '100%',
+        objectFit: 'cover',
+      },
+    },
   },
 })

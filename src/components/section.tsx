@@ -7,11 +7,18 @@ interface ISectionProps {
   size?: 'small' | 'medium' | 'large'
   color?: string
   id?: string
+  className?: string
   children?: ReactNode
 }
 
-export const Section = ({ size, color, id, children }: ISectionProps) => {
-  const className =
+export const Section = ({
+  size,
+  color,
+  id,
+  className: extraClassName,
+  children,
+}: ISectionProps) => {
+  const sizeClassName =
     size === 'medium'
       ? styles.sectionMedium
       : size === 'large'
@@ -20,11 +27,13 @@ export const Section = ({ size, color, id, children }: ISectionProps) => {
 
   return (
     <section
-      className={className}
+      className={[sizeClassName, extraClassName].filter(Boolean).join(' ')}
       id={id}
-      style={assignInlineVars({
-        [styles.sectionBgVar]: color ?? tokens.background,
-      })}
+      style={{
+        ...assignInlineVars({
+          [styles.sectionBgVar]: color ?? tokens.background,
+        }),
+      }}
     >
       {children}
     </section>

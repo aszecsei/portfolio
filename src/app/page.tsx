@@ -1,159 +1,91 @@
-'use client'
-
-import { faReact } from '@fortawesome/free-brands-svg-icons'
-import {
-  faDesktop,
-  faGamepad,
-  faRobot,
-} from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
-import { Column, Columns } from '@/components/column'
+import { About } from '@/components/about'
 import { Container } from '@/components/container'
 import { Footer } from '@/components/footer'
 import {
+  HeroContent,
   HeroImage,
-  HeroSocialButtonContainer,
-  HeroText,
-  SocialButtonContainer,
+  ScrollCue,
   SocialButtons,
 } from '@/components/hero'
-import { Icon } from '@/components/icon'
+import * as heroStyles from '@/components/hero.css'
 import Nav from '@/components/navbar'
+import { PartyMode } from '@/components/party-mode'
 import { Projects } from '@/components/projects'
 import { Section } from '@/components/section'
-import { SkillIcon } from '@/components/skill-icon'
 import { H1, H2, H4, Text } from '@/components/typography'
 import { games, otherProjects } from '@/models/project'
+import { vars } from '@/styles/theme.css'
 import * as tokens from '@/styles/tokens.css'
+import * as styles from './page.css'
 
 export default function HomePage() {
   return (
-    <div>
+    <>
+      <a className={styles.skipLink} href="#about">
+        Skip to content
+      </a>
       <Nav shouldUseScroll />
       <HeroImage>
-        <HeroText>
-          <H1 color={tokens.white} alignment="center">
-            Alic Szecsei
-          </H1>
-          <H4 color={tokens.white} alignment="center">
-            Gameplay Programmer & Software Engineer
-          </H4>
-        </HeroText>
-        <HeroSocialButtonContainer>
-          <SocialButtons />
-        </HeroSocialButtonContainer>
+        <HeroContent>
+          <div>
+            <H1
+              className={heroStyles.heroTitle}
+              color={tokens.white}
+              alignment="center"
+            >
+              Alic Szecsei
+            </H1>
+            <H4
+              className={heroStyles.heroTagline}
+              color={tokens.white}
+              alignment="center"
+            >
+              Gameplay Programmer & Software Engineer
+            </H4>
+          </div>
+          <SocialButtons className={heroStyles.heroSocials} />
+        </HeroContent>
+        <ScrollCue target="about" />
       </HeroImage>
-      <Section id="about">
-        <Container>
-          <H2 alignment="center">About Me</H2>
-          <Text>
-            I'm Alic Szecsei, a software engineer and game developer. I received
-            my Master's degree in computer science from the University of Iowa,
-            and am currently working at Microsoft. I've been programming since I
-            was 12, making simple rock-paper-scissors games in C, then writing
-            equally-simple encryption algorithms on my TI-89 graphing
-            calculator. I'm interested in game programming and graphics
-            programming; merging art and computer science in bold ways,
-            alongside interdisciplinary teams passionate about what they do. I'm
-            thrilled by the opportunity to solve a problem and have a working
-            piece of software to show off at the end.
-          </Text>
-          <Columns alignment="center">
-            <Column size={3}>
-              <H1 alignment="center">
-                <SkillIcon>
-                  <Icon>
-                    <FontAwesomeIcon icon={faGamepad} />
-                  </Icon>
-                </SkillIcon>
-              </H1>
-              <H4 alignment="center">Games</H4>
-              <Text>
-                I've made games in Unity, UE4 & XNA/MonoGame. I've participated
-                in multiple game jams, and have experience building VR
-                applications.
+      <main>
+        <Section id="about">
+          <Container>
+            <About />
+          </Container>
+        </Section>
+        <Section id="games" color={vars.color.surface}>
+          <Container>
+            <Projects projects={games} title="Games" noun="games" />
+          </Container>
+        </Section>
+        <Section id="software">
+          <Container>
+            <Projects
+              projects={otherProjects}
+              title="Software"
+              noun="projects"
+            />
+          </Container>
+        </Section>
+        <Section
+          id="contact"
+          color={vars.color.void}
+          className={styles.starfield}
+        >
+          <Container>
+            <div className={`${styles.contactBand} ${styles.starfieldContent}`}>
+              <H2 color={tokens.white}>Get in touch</H2>
+              <Text className={styles.contactText}>
+                I'm always interested in collaborating on new projects. Reach
+                out through any of these:
               </Text>
-            </Column>
-            <Column size={3}>
-              <H1 alignment="center">
-                <SkillIcon>
-                  <Icon>
-                    <FontAwesomeIcon icon={faReact} />
-                  </Icon>
-                </SkillIcon>
-              </H1>
-              <H4 alignment="center">Web</H4>
-              <Text>
-                I've worked on projects using React and Redux, CoffeeScript,
-                TypeScript, and more. I'm also experienced in build tools like
-                gulp, webpack, and Next.js.
-              </Text>
-            </Column>
-            <Column size={3}>
-              <H1 alignment="center">
-                <SkillIcon>
-                  <Icon>
-                    <FontAwesomeIcon icon={faRobot} />
-                  </Icon>
-                </SkillIcon>
-              </H1>
-              <H4 alignment="center">Machine Learning</H4>
-              <Text>
-                I have experience with developing a custom machine learning
-                solution using ELMs. In addition, I have experience with
-                TensorFlow and scikit-learn.
-              </Text>
-            </Column>
-            <Column size={3}>
-              <H1 alignment="center">
-                <SkillIcon>
-                  <Icon>
-                    <FontAwesomeIcon icon={faDesktop} />
-                  </Icon>
-                </SkillIcon>
-              </H1>
-              <H4 alignment="center">Other Software</H4>
-              <Text>
-                I've worked with Docker and several continuous integration &
-                deployment solutions. I also have experience with building
-                native applications using Electron.
-              </Text>
-            </Column>
-          </Columns>
-        </Container>
-      </Section>
-      <Section id="games">
-        <Container>
-          <H2 alignment="center">Games</H2>
-          <Projects projects={games} />
-        </Container>
-      </Section>
-      <Section id="software">
-        <Container>
-          <H2 alignment="center">Software</H2>
-          <Projects projects={otherProjects} />
-        </Container>
-      </Section>
-      <Section id="contact" color={tokens.dark}>
-        <Container>
-          <H2 alignment="center" color={tokens.white}>
-            Contact Me
-          </H2>
-          <Columns alignment="center">
-            <Column size={8}>
-              <Text alignment="center" color={tokens.light}>
-                I'm always interested in collaborating on new projects! Feel
-                free to reach out via one of the links below:
-              </Text>
-              <SocialButtonContainer>
-                <SocialButtons />
-              </SocialButtonContainer>
-            </Column>
-          </Columns>
-        </Container>
-      </Section>
+              <SocialButtons />
+            </div>
+          </Container>
+        </Section>
+      </main>
       <Footer />
-    </div>
+      <PartyMode />
+    </>
   )
 }

@@ -1,4 +1,5 @@
 import { hsl } from 'polished'
+import { palette } from './theme.css'
 
 // COLORS
 export const black = hsl(0, 0, 0.04)
@@ -36,15 +37,15 @@ export const warning = yellow
 export const danger = red
 
 export const light = whiteTer
-export const dark = greyDarker
+export const dark = palette.void
 
-export const background = whiteTer
-export const border = greyLighter
+export const background = palette.ground
+export const border = palette.hairline
 export const borderHover = greyLight
 
-export const text = greyDark
-export const textLight = grey
-export const textStrong = greyDarker
+export const text = palette.text
+export const textLight = palette.muted
+export const textStrong = palette.ink
 
 // TYPOGRAPHY
 export const familyBody =
@@ -64,5 +65,5 @@ export const easing = 'ease-out'
 export const radiusSmall = '2px'
 export const radius = '4px'
 export const radiusLarge = '6px'
-export const radiusRounded = '290486px'
+export const radiusRounded = '9999px'
 export const speed = '86ms'

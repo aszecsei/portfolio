@@ -17,31 +17,31 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^7.2.0",
-    "@fortawesome/free-brands-svg-icons": "^7.2.0",
-    "@fortawesome/free-solid-svg-icons": "^7.2.0",
-    "@fortawesome/react-fontawesome": "^3.3.0",
-    "@vanilla-extract/css": "^1.20.1",
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-brands-svg-icons": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "@fortawesome/react-fontawesome": "^3.5.0",
+    "@vanilla-extract/css": "^1.21.2",
     "@vanilla-extract/dynamic": "^2.1.5",
     "@vanilla-extract/recipes": "^0.5.7",
-    "animejs": "^4.3.6",
+    "animejs": "^4.5.0",
     "js-search": "^2.0.1",
-    "next": "^16.2.3",
-    "next-image-export-optimizer": "^1.20.1",
+    "next": "^16.3.5",
+    "next-image-export-optimizer": "^1.21.1",
     "polished": "^4.3.1",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "sharp": "^0.34.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "sharp": "^0.35.4",
     "stemr": "^1.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.11",
+    "@biomejs/biome": "2.5.13",
     "@types/js-search": "^1.4.4",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vanilla-extract/next-plugin": "^2.5.2",
-    "@vanilla-extract/vite-plugin": "^5.2.2",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.4"
+    "@vanilla-extract/vite-plugin": "^5.2.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   }
 }

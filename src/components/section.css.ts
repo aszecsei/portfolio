@@ -3,27 +3,37 @@ import { mq } from '@/styles/media.css'
 
 export const sectionBgVar = createVar()
 
-export const section = style({
-  padding: 'calc(1rem + 100px) 1.5rem',
+const base = {
+  padding: 'clamp(4rem, 8vw, 7rem) 1.5rem',
   backgroundColor: sectionBgVar,
-})
-
-export const sectionMedium = style({
-  padding: 'calc(1rem + 100px) 1.5rem',
-  backgroundColor: sectionBgVar,
+  scrollMarginTop: '3.5rem',
   '@media': {
     [mq.desktop]: {
-      padding: 'calc(9em + 100px) 1.5em',
+      scrollMarginTop: '4.5rem',
+    },
+  },
+} as const
+
+export const section = style(base)
+
+export const sectionMedium = style({
+  ...base,
+  '@media': {
+    ...base['@media'],
+    [mq.desktop]: {
+      ...base['@media'][mq.desktop],
+      padding: 'clamp(6rem, 12vw, 10rem) 1.5rem',
     },
   },
 })
 
 export const sectionLarge = style({
-  padding: 'calc(1rem + 100px) 1.5rem',
-  backgroundColor: sectionBgVar,
+  ...base,
   '@media': {
+    ...base['@media'],
     [mq.desktop]: {
-      padding: 'calc(18em + 100px) 1.5em',
+      ...base['@media'][mq.desktop],
+      padding: 'clamp(9rem, 18vw, 15rem) 1.5rem',
     },
   },
 })

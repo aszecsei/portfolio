@@ -1,4 +1,5 @@
 import { globalStyle } from '@vanilla-extract/css'
+import { vars } from './theme.css'
 
 /* Document */
 globalStyle('*, ::before, ::after', {
@@ -12,7 +13,6 @@ globalStyle('::before, ::after', {
 })
 
 globalStyle('html', {
-  scrollBehavior: 'smooth',
   cursor: 'default',
   fontFamily:
     'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
@@ -27,6 +27,20 @@ globalStyle('html', {
 /* Sections */
 globalStyle('body', {
   margin: 0,
+  backgroundColor: vars.color.ground,
+})
+
+globalStyle(':focus-visible', {
+  outline: vars.focusRing,
+  outlineOffset: '3px',
+})
+
+globalStyle('html', {
+  '@media': {
+    '(prefers-reduced-motion: no-preference)': {
+      scrollBehavior: 'smooth',
+    },
+  },
 })
 
 globalStyle('html, body', {
@@ -83,8 +97,8 @@ globalStyle('small', {
 })
 
 globalStyle('::selection', {
-  backgroundColor: '#b3d4fc',
-  color: '#000',
+  backgroundColor: 'rgba(178, 75, 239, 0.3)',
+  color: 'inherit',
   textShadow: 'none',
 })
 
@@ -175,7 +189,6 @@ globalStyle('[type="checkbox"], [type="radio"]', {
 
 globalStyle('[type="search"]', {
   WebkitAppearance: 'textfield',
-  outlineOffset: '-2px',
 })
 
 /* Interactive */
