@@ -163,14 +163,14 @@ export const art = style({
     backgroundImage: foil,
     backgroundSize: '220% 220%',
     backgroundPosition: 'var(--mx) var(--my)',
-    mixBlendMode: 'color-dodge',
+    mixBlendMode: 'screen',
     transition: `opacity 0.3s ${tokens.easing}`,
   },
   '@media': {
     [`${motionOk} and ${hoverOk}`]: {
       selectors: {
         [`${card}:hover &::after`]: {
-          opacity: 0.6,
+          opacity: 0.75,
         },
       },
     },

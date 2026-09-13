@@ -38,12 +38,18 @@ export const About = () => (
       <Text>
         I'm Alic Szecsei, a software engineer and game developer. I received my
         Master's degree in computer science from the University of Iowa, and am
-        currently working at Microsoft.
+        currently working at Amazon.
       </Text>
       <Text>
         I've been programming since I was 12, making simple rock-paper-scissors
         games in C, then writing equally-simple encryption algorithms on my
         TI-89 graphing calculator.
+      </Text>
+      <Text>
+        I spent six years working at Microsoft on the Azure Storage team, designing
+        a bespoke tag-based configuration schema to manage feature rollouts across
+        hundreds of datacenters and prototyping a platform-independent driver rewrite
+        from C++ to Rust.
       </Text>
       <Text>
         I'm interested in game programming and graphics programming; merging art

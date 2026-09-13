@@ -95,14 +95,14 @@ export const media = style({
     backgroundImage: foil,
     backgroundSize: '220% 220%',
     backgroundPosition: 'var(--mx) var(--my)',
-    mixBlendMode: 'color-dodge',
+    mixBlendMode: 'screen',
     transition: `opacity 0.3s ${tokens.easing}`,
   },
   '@media': {
     [`${motionOk} and ${hoverOk}`]: {
       selectors: {
         [`${card}:hover &::after`]: {
-          opacity: 0.7,
+          opacity: 0.85,
         },
       },
     },
@@ -113,7 +113,7 @@ export const typeLabel = style({
   position: 'absolute',
   top: '0.5rem',
   left: '0.5rem',
-  zIndex: 1,
+  zIndex: 3,
   padding: '0.2em 0.6em',
   borderRadius: tokens.radiusRounded,
   backgroundColor: rgba(palette.void, 0.65),

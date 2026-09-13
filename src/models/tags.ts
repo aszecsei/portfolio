@@ -1,18 +1,23 @@
+import { setLightness, setSaturation } from 'polished'
 import * as tokens from '@/styles/tokens.css'
+
+// Pull each hue down to a shade dark enough for white text to stay legible.
+const deep = (color: string): string =>
+  setLightness(0.3, setSaturation(0.62, color))
 
 const tagColorMap: Record<string, string> = {
   // ENGINES
-  Unity: tokens.purple,
-  'Unreal Engine 4': tokens.green,
+  Unity: deep(tokens.purple),
+  'Unreal Engine 4': deep(tokens.green),
   // LANGUAGES
-  Blueprints: tokens.turquoise,
-  'C++': tokens.red,
-  'C#': tokens.orange,
-  JavaScript: tokens.lime,
-  Ruby: tokens.maroon,
-  Flutter: tokens.blue,
-  Python: tokens.yellow,
+  Blueprints: deep(tokens.turquoise),
+  'C++': deep(tokens.red),
+  'C#': deep(tokens.orange),
+  JavaScript: deep(tokens.lime),
+  Ruby: deep(tokens.maroon),
+  Flutter: deep(tokens.blue),
+  Python: deep(tokens.yellow),
 }
 
 export const getColorForTag = (tag: string): string =>
-  tagColorMap[tag] ?? tokens.greyLighter
+  tagColorMap[tag] ?? tokens.greyDark
