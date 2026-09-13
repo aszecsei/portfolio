@@ -1,28 +1,11 @@
 import Link from 'next/link'
 import type { IProject } from '@/models/project'
-import * as tokens from '@/styles/tokens.css'
+import { getColorForTag } from '@/models/tags'
 import { Chip, Chips } from './chip'
 import { Image } from './image'
 import * as styles from './project.css'
 import { TiltCard } from './tilt-card'
 import { Text } from './typography'
-
-const tagColorMap: Record<string, string> = {
-  // ENGINES
-  Unity: tokens.purple,
-  'Unreal Engine 4': tokens.green,
-  // LANGUAGES
-  Blueprints: tokens.turquoise,
-  'C++': tokens.red,
-  'C#': tokens.orange,
-  JavaScript: tokens.lime,
-  Ruby: tokens.maroon,
-  Flutter: tokens.blue,
-  Python: tokens.yellow,
-}
-
-const getColorForTag = (tag: string): string =>
-  tagColorMap[tag] ?? tokens.whiteTer
 
 interface IProjectProps {
   projectDetails: IProject

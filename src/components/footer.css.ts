@@ -4,7 +4,7 @@ import { getFontSize } from '@/styles/typography.css'
 
 export const foot = style({
   backgroundColor: vars.color.void,
-  padding: '0 1.5rem 3rem',
+  padding: '2.5rem 1.5rem 3rem',
 })
 
 export const line = style({

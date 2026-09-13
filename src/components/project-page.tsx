@@ -1,169 +1,208 @@
-import type { IProject } from '@/models/project'
-import * as tokens from '@/styles/tokens.css'
+import {
+  faArrowLeft,
+  faArrowUpRightFromSquare,
+  faChevronRight,
+  faCode,
+  faTag,
+  faToolbox,
+  faUserAstronaut,
+} from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import Link from 'next/link'
+import { games, type IProject } from '@/models/project'
+import { getColorForTag } from '@/models/tags'
+import { vars } from '@/styles/theme.css'
 
-import { Column, Columns } from './column'
+import { Chip, Chips } from './chip'
 import { Container } from './container'
 import { Footer } from './footer'
 import GitHub from './github-widget'
 import { Image } from './image'
 import Nav from './navbar'
+import { PartyMode } from './party-mode'
+import { mediaImage } from './project.css'
 import * as styles from './project-page.css'
 import { Section } from './section'
-import { H1, H2, H5, Text } from './typography'
+import { TiltCard } from './tilt-card'
+import { H2, H3, Text } from './typography'
 
 interface IProjectPageProps {
   project: IProject
 }
 
-interface IItchWidgetProps {
-  itch: string
-}
-
-const ItchWidget = (props: IItchWidgetProps) => (
-  <iframe
-    frameBorder="0"
-    src={props.itch}
-    width="100%"
-    height="auto"
-    loading="lazy"
-    title="Itch.io widget"
-  />
+const ItchWidget = ({ itch }: { itch: string }) => (
+  <div className={styles.itchFrame}>
+    <iframe
+      className={styles.itchIframe}
+      src={itch}
+      loading="lazy"
+      title="Itch.io widget"
+    />
+  </div>
 )
 
-interface IYoutubeWidgetProps {
-  youtube: string
-}
-
-const YoutubeWidget = (props: IYoutubeWidgetProps) => (
-  <iframe
-    className={styles.youtubeIframe}
-    width="560"
-    height="315"
-    src={`https://www.youtube.com/embed/${props.youtube}?rel=0&amp;showinfo=0`}
-    frameBorder="0"
-    allowFullScreen
-    title="YouTube video"
-  />
+const YoutubeWidget = ({ youtube }: { youtube: string }) => (
+  <div className={`${styles.frame} ${styles.video}`}>
+    <iframe
+      className={styles.videoIframe}
+      src={`https://www.youtube.com/embed/${youtube}?rel=0`}
+      allowFullScreen
+      loading="lazy"
+      title="YouTube video"
+    />
+  </div>
 )
 
-export const ProjectPage = (props: IProjectPageProps) => (
-  <>
-    <Nav />
-    <Section>
-      <Container>
-        <H1 alignment="center">{props.project.name}</H1>
-        <H5 alignment="center" color={tokens.grey}>
-          {props.project.date}
-        </H5>
-        <Columns alignment="center">
-          <Column size={8}>
-            <Image
-              src={`/static/img/projects/${props.project.img_path}`}
-              alt={`Image showing ${props.project.name}`}
-              hasRoundedCorners
-            />
-          </Column>
-        </Columns>
-        <div className={styles.projectSummaries}>
-          <div className={styles.projectSummaryHolder}>
-            <div className={styles.projectSummaryLabel}>
-              <Text alignment="right">Project Type</Text>
-            </div>
-            <div className={styles.projectSummaryText}>
-              <Text>{props.project.type}</Text>
-            </div>
-          </div>
-          <div className={styles.projectSummaryHolder}>
-            <div className={styles.projectSummaryLabel}>
-              <Text alignment="right">Software Used</Text>
-            </div>
-            <div className={styles.projectSummaryText}>
-              <Text>{props.project.software}</Text>
-            </div>
-          </div>
-          <div className={styles.projectSummaryHolder}>
-            <div className={styles.projectSummaryLabel}>
-              <Text alignment="right">Languages Used</Text>
-            </div>
-            <div className={styles.projectSummaryText}>
-              <Text>{props.project.language}</Text>
-            </div>
-          </div>
-          <div className={styles.projectSummaryHolder}>
-            <div className={styles.projectSummaryLabel}>
-              <Text alignment="right">Primary Role(s)</Text>
-            </div>
-            <div className={styles.projectSummaryText}>
-              <Text>{props.project.role}</Text>
-            </div>
-          </div>
-        </div>
-      </Container>
-    </Section>
-    <Section color={tokens.dark}>
-      <Container>
-        <Columns alignment="center">
-          <Column size={8}>
-            <H2 alignment="center" color={tokens.light}>
-              Description
-            </H2>
-            {props.project.description.map((v) => (
-              <Text
-                key={v}
-                color={tokens.light}
-                dangerouslySetInnerHTML={{ __html: v }}
-              />
-            ))}
-            {props.project.gif_path ? (
-              <Image
-                src={`/static/img/projects/${props.project.gif_path}`}
-                alt={`a gif of ${props.project.name}`}
-                unoptimized
-              />
-            ) : (
-              false
-            )}
-            {props.project.youtube ? (
-              <div className={styles.youtubeWrapper}>
-                <YoutubeWidget youtube={props.project.youtube} />
+const statRows = (project: IProject) => [
+  { label: 'Project type', value: project.type, icon: faTag },
+  { label: 'Software', value: project.software, icon: faToolbox },
+  { label: 'Languages', value: project.language, icon: faCode },
+  { label: 'Roles', value: project.role, icon: faUserAstronaut },
+]
+
+export const ProjectPage = ({ project }: IProjectPageProps) => {
+  const isGame = games.includes(project)
+  const isExternal = project.link.startsWith('http')
+
+  return (
+    <>
+      <Nav />
+      <main>
+        <Section>
+          <Container>
+            <div className={styles.header}>
+              <div className={styles.intro}>
+                <Link
+                  className={styles.backLink}
+                  href={isGame ? '/#games' : '/#software'}
+                >
+                  <FontAwesomeIcon
+                    className={styles.backIcon}
+                    icon={faArrowLeft}
+                    aria-hidden="true"
+                  />
+                  {isGame ? 'Games' : 'Software'}
+                </Link>
+                <div>
+                  <h1 className={styles.title}>{project.name}</h1>
+                  <time className={styles.date}>{project.date}</time>
+                </div>
+                <div className={styles.meta}>
+                  <span className={styles.typePill}>{project.type}</span>
+                  {project.tags?.length ? (
+                    <Chips>
+                      {project.tags.map((tag) => (
+                        <Chip key={tag} color={getColorForTag(tag)}>
+                          {tag}
+                        </Chip>
+                      ))}
+                    </Chips>
+                  ) : null}
+                </div>
               </div>
-            ) : (
-              false
-            )}
-          </Column>
-        </Columns>
-      </Container>
-    </Section>
-    <Section>
-      <Container>
-        <H2 alignment="center">Links</H2>
-        {props.project.link ? (
-          <H5 alignment="center">
-            <a className={styles.projectLink} href={props.project.link}>
-              {props.project.name}
-            </a>
-          </H5>
-        ) : (
-          false
-        )}
-        <Columns alignment="center">
-          {props.project.github ? (
-            <Column size={6}>
-              <GitHub repository={props.project.github} />
-            </Column>
-          ) : (
-            false
-          )}
-          {props.project.itch ? (
-            <Column size={6}>
-              <ItchWidget itch={props.project.itch} />
-            </Column>
-          ) : (
-            false
-          )}
-        </Columns>
-      </Container>
-    </Section>
-    <Footer />
-  </>
-)
+              <TiltCard className={styles.artCard}>
+                <div className={styles.art}>
+                  <Image
+                    src={`/static/img/projects/${project.img_path}`}
+                    alt={`Image showing ${project.name}`}
+                    loading="eager"
+                    fit="cover"
+                    className={mediaImage}
+                  />
+                </div>
+              </TiltCard>
+            </div>
+            <dl className={styles.stats}>
+              {statRows(project).map((row) => (
+                <div key={row.label} className={styles.stat}>
+                  <span className={styles.statIcon} aria-hidden="true">
+                    <FontAwesomeIcon icon={row.icon} />
+                  </span>
+                  <dt className={styles.statLabel}>{row.label}</dt>
+                  <dd className={styles.statValue}>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Container>
+        </Section>
+
+        <Section color={vars.color.surface}>
+          <Container>
+            <div className={styles.about}>
+              <div>
+                <div className={styles.prose}>
+                  {project.description.map((paragraph) => (
+                    <Text
+                      key={paragraph}
+                      dangerouslySetInnerHTML={{ __html: paragraph }}
+                    />
+                  ))}
+                </div>
+                {project.gif_path ? (
+                  <div className={styles.frame}>
+                    <Image
+                      src={`/static/img/projects/${project.gif_path}`}
+                      alt={`A gif of ${project.name}`}
+                      className={styles.frameImage}
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+                {project.youtube ? (
+                  <YoutubeWidget youtube={project.youtube} />
+                ) : null}
+              </div>
+              {project.tasks?.length ? (
+                <div>
+                  <H3 className={styles.questHeading}>What I did</H3>
+                  <ul className={styles.quests}>
+                    {project.tasks.map((task) => (
+                      <li key={task} className={styles.quest}>
+                        <span className={styles.questMark} aria-hidden="true">
+                          <FontAwesomeIcon icon={faChevronRight} />
+                        </span>
+                        {task}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </Container>
+        </Section>
+
+        <Section>
+          <Container>
+            <div className={styles.links}>
+              <H2>Links</H2>
+              <a
+                className={styles.cta}
+                href={project.link}
+                {...(isExternal
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
+              >
+                {isGame ? 'Play' : 'View'} {project.name}
+                <FontAwesomeIcon
+                  className={styles.ctaIcon}
+                  icon={faArrowUpRightFromSquare}
+                  aria-hidden="true"
+                />
+              </a>
+              {project.github || project.itch ? (
+                <div className={styles.widgets}>
+                  {project.github ? (
+                    <GitHub repository={project.github} />
+                  ) : null}
+                  {project.itch ? <ItchWidget itch={project.itch} /> : null}
+                </div>
+              ) : null}
+            </div>
+          </Container>
+        </Section>
+      </main>
+      <Footer />
+      <PartyMode />
+    </>
+  )
+}

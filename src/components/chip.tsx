@@ -22,12 +22,14 @@ export const Chip = ({ isRounded, color, children }: IChipProps) => {
   return (
     <span
       className={`${styles.chip({ isRounded })} ${styles.chipInChips}`}
-      style={assignInlineVars({
-        [styles.chipBgVar]: bg,
-        [styles.chipColorVar]: fg,
-        [styles.chipHoverBgVar]: darken(0.05, bg),
-        [styles.chipActiveBgVar]: darken(0.1, bg),
-      })}
+      style={{
+        ...assignInlineVars({
+          [styles.chipBgVar]: bg,
+          [styles.chipColorVar]: fg,
+          [styles.chipHoverBgVar]: darken(0.05, bg),
+          [styles.chipActiveBgVar]: darken(0.1, bg),
+        }),
+      }}
     >
       {children}
     </span>

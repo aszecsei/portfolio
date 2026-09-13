@@ -1,5 +1,12 @@
 'use client'
 
+import { faGithub } from '@fortawesome/free-brands-svg-icons'
+import {
+  faCodeFork,
+  faDownload,
+  faEye,
+} from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useEffect, useState } from 'react'
 import * as styles from './github-widget.css'
 
@@ -29,7 +36,7 @@ const ExternalLink = ({
     title={title}
     target="_blank"
     rel="noreferrer noopener"
-    className={className ?? styles.externalLink}
+    className={className ?? styles.link}
   >
     {children}
   </a>
@@ -77,62 +84,77 @@ export default function GitHubWidget({
   const repoUrl = `https://github.com/${vendorName}/${repoName}`
 
   return (
-    <div className={styles.githubBox}>
-      <div className={styles.githubTitle}>
-        <h3>
-          <ExternalLink href={vendorUrl} title={vendorUrl}>
-            {vendorName}
-          </ExternalLink>
-          /
-          <ExternalLink
-            href={repoUrl}
-            title={repoUrl}
-            className={styles.repoLink}
-          >
-            {repoName}
-          </ExternalLink>
+    <div className={styles.box}>
+      <div className={styles.head}>
+        <h3 className={styles.name}>
+          <FontAwesomeIcon
+            className={styles.nameIcon}
+            icon={faGithub}
+            aria-hidden="true"
+          />
+          <span>
+            <ExternalLink href={vendorUrl} title={vendorUrl}>
+              {vendorName}
+            </ExternalLink>
+            {' / '}
+            <ExternalLink
+              href={repoUrl}
+              title={repoUrl}
+              className={styles.repoLink}
+            >
+              {repoName}
+            </ExternalLink>
+          </span>
         </h3>
-        <div className={styles.githubStats}>
+        <div className={styles.stats}>
           <ExternalLink
             href={`${repoUrl}/watchers`}
             title="See watchers"
-            className={styles.watchersLink}
+            className={styles.statLink}
           >
+            <FontAwesomeIcon icon={faEye} aria-hidden="true" />
             {repo.watchers}
           </ExternalLink>
           <ExternalLink
             href={`${repoUrl}/network/members`}
-            title="See forkers"
-            className={styles.forkersLink}
+            title="See forks"
+            className={styles.statLink}
           >
+            <FontAwesomeIcon icon={faCodeFork} aria-hidden="true" />
             {repo.forks}
           </ExternalLink>
         </div>
       </div>
-      <div className={styles.githubContent}>
-        <p className="description">
-          <span>{repo.description}</span> &mdash;{' '}
-          <ExternalLink href={`${repoUrl}#readme`}>Read More</ExternalLink>
+      <div className={styles.body}>
+        <p className={styles.description}>
+          {repo.description ? <span>{repo.description} &mdash; </span> : null}
+          <ExternalLink href={`${repoUrl}#readme`} className={styles.bodyLink}>
+            Read more
+          </ExternalLink>
         </p>
         {repo.homepage && (
-          <p className={styles.githubContentLink}>
-            <ExternalLink href={repo.homepage}>{repo.homepage}</ExternalLink>
+          <p className={styles.homepage}>
+            <ExternalLink href={repo.homepage} className={styles.bodyLink}>
+              {repo.homepage}
+            </ExternalLink>
           </p>
         )}
       </div>
-      <div className={styles.download}>
+      <div className={styles.foot}>
         {repo.pushed_at && (
-          <div className={styles.updated}>
-            Latest commit to the <strong>{repo.default_branch}</strong> branch
+          <p className={styles.updated}>
+            Latest commit to the{' '}
+            <span className={styles.branch}>{repo.default_branch}</span> branch
             on {repo.pushed_at.substring(0, 10)}
-          </div>
+          </p>
         )}
         <a
-          href={`${repoUrl}/zipball/master`}
+          href={`${repoUrl}/zipball/${repo.default_branch ?? 'master'}`}
           title="Get repository"
-          className={styles.downloadButton}
+          className={styles.download}
         >
-          Download as zip
+          <FontAwesomeIcon icon={faDownload} aria-hidden="true" />
+          Download zip
         </a>
       </div>
     </div>

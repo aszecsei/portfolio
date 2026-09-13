@@ -1,22 +1,16 @@
 import { style } from '@vanilla-extract/css'
 import { rgba } from 'polished'
+import {
+  cardInset,
+  cardRadius,
+  foil,
+  frameRadius,
+  frameShadow,
+} from '@/styles/effects.css'
 import { hoverOk, motionOk } from '@/styles/motion.css'
 import { palette, vars } from '@/styles/theme.css'
 import * as tokens from '@/styles/tokens.css'
 import { getFontSize } from '@/styles/typography.css'
-
-const cardRadius = '14px'
-
-// Foil sheen: a diagonal rainbow band that slides with the pointer.
-const foil = [
-  'linear-gradient(115deg,',
-  'transparent 25%,',
-  'rgba(255, 60, 200, 0.55) 36%,',
-  'rgba(80, 210, 255, 0.55) 43%,',
-  'rgba(255, 235, 90, 0.5) 50%,',
-  'rgba(90, 255, 180, 0.55) 57%,',
-  'transparent 70%)',
-].join(' ')
 
 export const card = style({
   position: 'relative',
@@ -29,12 +23,12 @@ export const card = style({
   backgroundImage: `linear-gradient(160deg, ${vars.color.surface} 0%, ${vars.color.ground} 100%)`,
   border: `1px solid ${vars.color.hairline}`,
   borderRadius: cardRadius,
-  boxShadow: `0 1px 2px ${rgba(palette.void, 0.06)}, inset 0 0 0 1px rgba(255, 255, 255, 0.7)`,
+  boxShadow: `0 1px 2px ${rgba(palette.void, 0.06)}, ${cardInset}`,
   transition: `transform 0.2s ${tokens.easing}, box-shadow 0.2s ${tokens.easing}, border-color 0.2s ${tokens.easing}`,
   selectors: {
     '&:hover, &:focus-within': {
       borderColor: rgba(palette.accent, 0.5),
-      boxShadow: `var(--sx) var(--sy) 28px ${rgba(palette.void, 0.18)}, 0 1px 2px ${rgba(palette.void, 0.08)}, inset 0 0 0 1px rgba(255, 255, 255, 0.7)`,
+      boxShadow: `var(--sx) var(--sy) 28px ${rgba(palette.void, 0.18)}, 0 1px 2px ${rgba(palette.void, 0.08)}, ${cardInset}`,
     },
   },
   vars: {
@@ -88,8 +82,8 @@ export const media = style({
   overflow: 'hidden',
   backgroundColor: vars.color.ground,
   border: `1px solid ${vars.color.hairline}`,
-  borderRadius: '8px',
-  boxShadow: `inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 2px 6px ${rgba(palette.void, 0.12)}`,
+  borderRadius: frameRadius,
+  boxShadow: frameShadow,
   // Foil sheen over the art only, sliding with the pointer.
   '::after': {
     content: '""',
